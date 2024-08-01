@@ -1,19 +1,16 @@
 from fastapi import APIRouter, Depends, Body
 from fastapi.responses import FileResponse
 from typing import Annotated, Union
-from ..dependencies import get_token_header
-from ..schemas import Item
+
+from app.schemas import Item
 
 import pandas as pd
 import requests
 import os
 
-router = APIRouter(
-    prefix="/iow",
-    tags=["iow"],
-    dependencies=[Depends(get_token_header)],
-    responses={404: {"description": "Not found"}},
-)
+
+router = APIRouter()
+
 
 def get_history_data(item):
     base_dir = os.getcwd()
