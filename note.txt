@@ -1,0 +1,2 @@
+docker build -t fastapi_image .
+docker run -d --name fastapi_service -p 8000:8000 fastapi_image
