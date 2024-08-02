@@ -101,7 +101,7 @@ async def lookup_station_metadata(client_id: str, client_secret: str, st_uuid: s
 
 
 @router.post("/st_pq_relation/", response_class=FileResponse)
-async def download_station_and_physical_quantity_relation(client_id: str, client_secret: str, file: UploadFile = File(...)):
+async def download_station_and_physical_quantity_relation(client_id: str, client_secret: str, st_file: UploadFile = File(...)):
     # Get IoW token
     PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
     response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
@@ -113,13 +113,13 @@ async def download_station_and_physical_quantity_relation(client_id: str, client
         temp_folder_path = base_dir + "/temp/"
         if not os.path.exists(temp_folder_path):
             os.makedirs(temp_folder_path)
-        with open(temp_folder_path + file.filename, 'wb') as f:
-            f.write(file.file.read())
+        with open(temp_folder_path + st_file.filename, 'wb') as f:
+            f.write(st_file.file.read())
     except Exception:
         return {"message": "There was an error uploading the file"}
 
     # Read txt file (One line, one station)
-    with open(temp_folder_path + file.filename, 'r') as f:
+    with open(temp_folder_path + st_file.filename, 'r') as f:
         content = f.readlines()
 
     data = dict()

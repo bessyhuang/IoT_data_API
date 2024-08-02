@@ -45,19 +45,19 @@ async def lookup_physical_quantity_metadata(pq_uuid: str):
 
 
 @router.post("/st_pq_relation/", response_class=FileResponse)
-async def download_station_and_physical_quantity_relation(file: UploadFile = File(...)):
+async def download_station_and_physical_quantity_relation(st_file: UploadFile = File(...)):
     # Write txt file to temp folder
     try:
         temp_folder_path = base_dir + "/temp/"
         if not os.path.exists(temp_folder_path):
             os.makedirs(temp_folder_path)
-        with open(temp_folder_path + file.filename, 'wb') as f:
-            f.write(file.file.read())
+        with open(temp_folder_path + st_file.filename, 'wb') as f:
+            f.write(st_file.file.read())
     except Exception:
         return {"message": "There was an error uploading the file"}
 
     # Read txt file (One line, one station)
-    with open(temp_folder_path + file.filename, 'r') as f:
+    with open(temp_folder_path + st_file.filename, 'r') as f:
         content = f.readlines()
 
     data = dict()
