@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends
 
 from .dependencies import get_query_token, get_token_header
 from .internal import admin
-from .routers.iow import history_data, latest_data, statistics_data
+from .routers.iow import history_data, latest_data, latest_data_from_db, statistics_data
 
 
 app = FastAPI()
@@ -13,6 +13,12 @@ app.include_router(
     latest_data.router,
     prefix="/iow/latest",
     tags=["詮釋資料 & 即時資料"],
+)
+
+app.include_router(
+    latest_data_from_db.router,
+    prefix="/iow/latest_from_db",
+    tags=["詮釋資料 & 非即時資料 (from DB)"],
 )
 
 app.include_router(

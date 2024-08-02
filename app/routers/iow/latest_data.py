@@ -59,10 +59,11 @@ def write_file(data, filename):
     output_file = os.path.join(temp_folder_path, filename)
     if file_type == 'json':
         with open(output_file, 'w') as fp:
-            json.dump(data, fp, indent=4)
+            json.dump(data, fp, indent=4, ensure_ascii=False)
     elif file_type == 'csv':
         data.to_csv(output_file, encoding='utf-8-sig', index=False)
     return output_file
+
 
 @router.post("/pq_uuid_list/{st_uuid}")
 async def lookup_physical_quantity_list(client_id: str, client_secret: str, st_uuid: str):
