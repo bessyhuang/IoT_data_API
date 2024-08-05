@@ -28,12 +28,12 @@ app.include_router(
     dependencies=[Depends(get_query_token)],
 )
 
-# app.include_router(
-#     statistics_data.router,
-#     prefix="/iow/statistics",
-#     tags=["統計資料"],
-#     dependencies=[Depends(get_query_token)],
-# )
+app.include_router(
+    statistics_data.router,
+    prefix="/iow/statistics",
+    tags=["統計資料"],
+    dependencies=[Depends(get_query_token)],
+)
 
 
 # app.include_router(
