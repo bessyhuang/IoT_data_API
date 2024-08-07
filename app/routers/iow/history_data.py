@@ -27,7 +27,6 @@ PAYLOAD = {
 
 
 def get_PhysicalQuantity_history_data(headers, item, st_name):
-    print(item, type(item))
     All_pq_Dict = dict()
     All_pq_Dict[item.pq_uuid] = []
 
@@ -47,7 +46,7 @@ def compress(file_names):
     # create the zip file first parameter path/name, second mode
     temp_folder_path = base_dir + "/temp/"
     random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
-    f_name = F"RAW_DATA_{random_string}.zip"
+    f_name = F"DATA_{random_string}.zip"
     zip_filepath = os.path.join(temp_folder_path, f_name)
     try:
         for file_name in file_names:
