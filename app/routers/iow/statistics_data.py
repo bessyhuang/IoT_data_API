@@ -96,7 +96,9 @@ def calculate_pump_runtime(pump, df, pump_interval_N_min):
         # Sum values in each group
         group_sums = []
         for group in groups:
-            sum_values = sum(item['Value'] for item in group)
+            duration_sec = (group[-1]['TimeStamp'] - group[0]['TimeStamp']).total_seconds()
+            pumping_volume = duration_sec * 0.3
+            # sum_values = sum(item['Value'] for item in group)  # remove rule
             group_sums.append({
                 'st_uuid': pump.st_uuid,
                 'pq_uuid': pump.pq_uuid,
@@ -105,7 +107,7 @@ def calculate_pump_runtime(pump, df, pump_interval_N_min):
                 '所屬單位': pump.institution,
                 '抽水區間 (Start_TimeStamp)': group[0]['TimeStamp'],
                 '抽水區間 (End_TimeStamp)': group[-1]['TimeStamp'],
-                '抽水量(立方公尺)': sum_values,
+                '抽水量(立方公尺)': pumping_volume,
                 '抽水(分)': (group[-1]['TimeStamp'] - group[0]['TimeStamp'])
             })
 
@@ -131,12 +133,71 @@ def calculate_avail_rate(item, df, N_records_per_day):
             df_cal[monthly_avg_field_name] = df_cal[monthly_avg_field_name].apply(lambda x: 100 if x >= 100 else x)
         return df_cal
 
+def calculate_max_flood_height(pump, df, flood_height_interval_N_min):
+    temp_folder_path = base_dir + "/temp/"
+    if "Value" not in df:
+        group_sums = []
+        group_sums.append({
+            'st_uuid': pump.st_uuid,
+            'pq_uuid': pump.pq_uuid,
+            '水位站編號': pump.st_name,
+            '所在地點': pump.location,
+            '所屬單位': pump.institution,
+            '淹水區間 (Start_TimeStamp)': '',
+            '淹水區間 (End_TimeStamp)': '',
+            '最大淹水高度(公分)': '',
+            '淹水持續時間(分鐘)': '此時間區間無歷史資料'
+        })
+        f_name = F'{temp_folder_path}{pump.st_name}_{pump.datetime_start}_{pump.datetime_end}_output.csv'
+        df.to_csv(f_name, encoding='utf-8-sig', index=False)
+        result_df = pd.DataFrame(group_sums)
+        return result_df
+    else:
+        df['TimeStamp'] = pd.to_datetime(df['TimeStamp'])
+        filtered_data = df[df['Value'] > 0].reset_index(drop=True)
+
+        # Initialize variables to track groups
+        groups = []
+        current_group = []
+        previous_timestamp = None
+
+        # Group consecutive timestamps within 3 mins interval
+        for i, row in filtered_data.iterrows():
+            if (previous_timestamp is None) or (row['TimeStamp'] - previous_timestamp <= timedelta(minutes=flood_height_interval_N_min)):
+                current_group.append(row)
+            else:
+                if current_group:
+                    groups.append(current_group)
+                current_group = [row]
+            previous_timestamp = row['TimeStamp']
+
+        if current_group:
+            groups.append(current_group)
+
+        # Sum values in each group
+        group_sums = []
+        for group in groups:
+            max_values = max(item['Value'] for item in group)
+            group_sums.append({
+                'st_uuid': pump.st_uuid,
+                'pq_uuid': pump.pq_uuid,
+                '水位站編號': pump.st_name,
+                '所在地點': pump.location,
+                '所屬單位': pump.institution,
+                '淹水區間 (Start_TimeStamp)': group[0]['TimeStamp'],
+                '淹水區間 (End_TimeStamp)': group[-1]['TimeStamp'],
+                '最大淹水高度(公分)': max_values,
+                '淹水持續時間(分鐘)': (group[-1]['TimeStamp'] - group[0]['TimeStamp'])
+            })
+
+        result_df = pd.DataFrame(group_sums)
+        return result_df
 
 @router.post("/report/pump_runtime", response_class=FileResponse)
 async def pump_runtime_report(
     datetime_start: str,
     datetime_end: str,
-    pump_interval_N_min: int = 3,
+    pump_interval_N_min: int = 10,
     st_pq_file: UploadFile = File(...)
 ):
     # Get IoW token
@@ -189,18 +250,25 @@ async def pump_runtime_report(
             if result_df.shape[0] > 0:
                 file_names.append(f_path)
         except:
-            pass
+            with open(temp_folder_path + '無歷史資料的監測站_PumpRuntime_report.txt', 'a') as f_out:
+                f_out.write(F"{st_name}\t{st_uuid}\n")
+
+    if os.path.isfile(temp_folder_path + '無歷史資料的監測站_PumpRuntime_report.txt'):
+        file_names.append(temp_folder_path + '無歷史資料的監測站_PumpRuntime_report.txt')
+
     if len(file_names) > 0:
         zip_filepath, f_name = compress(file_names)
+        os.system(F"rm {temp_folder_path}無歷史資料的監測站_PumpRuntime_report.txt")
         return FileResponse(zip_filepath, media_type='application/octet-stream', filename=f_name)
     else:
-        return "No data"
+        result = {"msg": "NO DATA TO DOWNLOAD"}
+        return result
 
 @router.post("/report/avail_rate", response_class=FileResponse)
 async def avail_rate_report(
     datetime_start: str,
     datetime_end: str,
-    N_records_per_day: int,
+    N_records_per_day: int = 24,
     st_pq_file: UploadFile = File(...)
 ):
     # Write txt file to temp folder
@@ -240,15 +308,86 @@ async def avail_rate_report(
             if result_df.shape[0] > 0:
                 file_names.append(f_path)
         except:
-            with open(temp_folder_path + '無歷史資料的監測站.txt', 'a') as f_out:
+            with open(temp_folder_path + '無歷史資料的監測站_AvailRate_report.txt', 'a') as f_out:
                 f_out.write(F"{st_name}\t{st_uuid}\n")
 
-    if os.path.isfile(temp_folder_path + '無歷史資料的監測站.txt'):
-        file_names.append(temp_folder_path + '無歷史資料的監測站.txt')
+    if os.path.isfile(temp_folder_path + '無歷史資料的監測站_AvailRate_report.txt'):
+        file_names.append(temp_folder_path + '無歷史資料的監測站_AvailRate_report.txt')
 
     if len(file_names) > 0:
         zip_filepath, f_name = compress(file_names)
-        os.system(F"rm {temp_folder_path}無歷史資料的監測站.txt")
+        os.system(F"rm {temp_folder_path}無歷史資料的監測站_AvailRate_report.txt")
+        return FileResponse(zip_filepath, media_type='application/octet-stream', filename=f_name)
+    else:
+        result = {"msg": "NO DATA TO DOWNLOAD"}
+        return result
+
+@router.post("/report/max_flood_height", response_class=FileResponse)
+async def max_flood_height_report(
+    datetime_start: str,
+    datetime_end: str,
+    flood_height_interval_N_min: int = 8,
+    st_pq_file: UploadFile = File(...)
+):
+    # Get IoW token
+    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+    token = response["access_token"]
+    headers = {"Accept": "application/json", "Authorization": "Bearer %s" % token}
+
+    # Write txt file to temp folder
+    try:
+        temp_folder_path = base_dir + "/temp/"
+        if not os.path.exists(temp_folder_path):
+            os.makedirs(temp_folder_path)
+        with open(temp_folder_path + st_pq_file.filename, 'wb') as f:
+            f.write(st_pq_file.file.read())
+    except Exception:
+        return {"message": "There was an error uploading the file"}
+
+    # Read txt file (One line, one station)
+    with open(temp_folder_path + st_pq_file.filename, 'r') as f:
+        content = f.readlines()
+
+    file_names = []
+    st_location_dict = get_country_town_village()
+    for line in content:
+        line = line.replace('\n', '').replace('\t', ',')
+        line = line.split(',')
+        st_uuid = line[0]
+        pq_uuid = line[1]
+        try:
+            location = st_location_dict[st_uuid]
+        except:
+            location = ''
+
+        # API
+        s_response = get_Station_metadata(st_uuid, headers)
+        st_name = s_response['Name']
+        institution = s_response["JsonProperties"]["MetaData"]["Institution"]
+
+        waterlevel_item = Pump(
+            st_uuid=st_uuid, st_name=st_name, pq_uuid=pq_uuid,
+            location=location, institution=institution,
+            datetime_start=datetime_start, datetime_end=datetime_end
+        )
+        df = get_PhysicalQuantity_history_data(headers, waterlevel_item, st_name)
+        try:
+            df = df[["TimeStamp", "Value"]]
+            result_df = calculate_max_flood_height(waterlevel_item, df, flood_height_interval_N_min)
+            f_name = F'{st_name}_{pq_uuid}.csv'
+            f_path = write_file(result_df, f_name)
+            if result_df.shape[0] > 0:
+                file_names.append(f_path)
+        except:
+            with open(temp_folder_path + '無歷史資料的監測站_MaxWaterLevel_report.txt', 'a') as f_out:
+                f_out.write(F"{st_name}\t{st_uuid}\n")
+
+    if os.path.isfile(temp_folder_path + '無歷史資料的監測站_MaxWaterLevel_report.txt'):
+        file_names.append(temp_folder_path + '無歷史資料的監測站_MaxWaterLevel_report.txt')
+
+    if len(file_names) > 0:
+        zip_filepath, f_name = compress(file_names)
+        os.system(F"rm {temp_folder_path}無歷史資料的監測站_MaxWaterLevel_report.txt")
         return FileResponse(zip_filepath, media_type='application/octet-stream', filename=f_name)
     else:
         result = {"msg": "NO DATA TO DOWNLOAD"}
