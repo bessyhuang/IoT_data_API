@@ -53,7 +53,6 @@ def get_country_town_village():
     return st_location_dict
 
 def calculate_pump_runtime(pump, df, pump_interval_N_min):
-    temp_folder_path = base_dir + "/temp/"
     if "Value" not in df:
         group_sums = []
         group_sums.append({
@@ -67,12 +66,10 @@ def calculate_pump_runtime(pump, df, pump_interval_N_min):
             '抽水量(立方公尺)': '',
             '抽水(分)': '此時間區間無歷史資料'
         })
-        f_name = F'{temp_folder_path}{pump.st_name}_{pump.datetime_start}_{pump.datetime_end}_output.csv'
-        df.to_csv(f_name, encoding='utf-8-sig', index=False)
         result_df = pd.DataFrame(group_sums)
         return result_df
     else:
-        df['TimeStamp'] = pd.to_datetime(df['TimeStamp'])
+        df['TimeStamp'] = pd.to_datetime(df['TimeStamp'], format='ISO8601')
         filtered_data = df[df['Value'] > 0].reset_index(drop=True)
 
         # Initialize variables to track groups
@@ -112,8 +109,23 @@ def calculate_pump_runtime(pump, df, pump_interval_N_min):
                     '抽水(分)': (group[-1]['TimeStamp'] - group[0]['TimeStamp'])
                 })
 
-        result_df = pd.DataFrame(group_sums)
-        return result_df
+        if group_sums == []:
+            group_sums.append({
+                'st_uuid': pump.st_uuid,
+                'pq_uuid': pump.pq_uuid,
+                '抽水機編號': pump.st_name,
+                '所在地點': pump.location,
+                '所屬單位': pump.institution,
+                '抽水區間 (Start_TimeStamp)': '',
+                '抽水區間 (End_TimeStamp)': '',
+                '抽水量(立方公尺)': '',
+                '抽水(分)': '此時間區間_無抽水'
+            })
+            result_df = pd.DataFrame(group_sums)
+            return result_df
+        else:
+            result_df = pd.DataFrame(group_sums)
+            return result_df
 
 def calculate_avail_rate(item, df, N_records_per_day):
     duration_in_days = (dt.strptime(item.datetime_end, '%Y-%m-%d') - dt.strptime(item.datetime_start, '%Y-%m-%d')).days + 1
@@ -135,7 +147,6 @@ def calculate_avail_rate(item, df, N_records_per_day):
         return df_cal
 
 def calculate_max_flood_height(pump, df, flood_height_interval_N_min):
-    temp_folder_path = base_dir + "/temp/"
     if "Value" not in df:
         group_sums = []
         group_sums.append({
@@ -149,12 +160,10 @@ def calculate_max_flood_height(pump, df, flood_height_interval_N_min):
             '最大淹水高度(公分)': '',
             '淹水持續時間(分鐘)': '此時間區間無歷史資料'
         })
-        f_name = F'{temp_folder_path}{pump.st_name}_{pump.datetime_start}_{pump.datetime_end}_output.csv'
-        df.to_csv(f_name, encoding='utf-8-sig', index=False)
         result_df = pd.DataFrame(group_sums)
         return result_df
     else:
-        df['TimeStamp'] = pd.to_datetime(df['TimeStamp'])
+        df['TimeStamp'] = pd.to_datetime(df['TimeStamp'], format='ISO8601')
         filtered_data = df[df['Value'] > 0].reset_index(drop=True)
 
         # Initialize variables to track groups
@@ -179,20 +188,36 @@ def calculate_max_flood_height(pump, df, flood_height_interval_N_min):
         group_sums = []
         for group in groups:
             max_values = max(item['Value'] for item in group)
+            if max_values > 0:
+                group_sums.append({
+                    'st_uuid': pump.st_uuid,
+                    'pq_uuid': pump.pq_uuid,
+                    '水位站編號': pump.st_name,
+                    '所在地點': pump.location,
+                    '所屬單位': pump.institution,
+                    '淹水區間 (Start_TimeStamp)': group[0]['TimeStamp'],
+                    '淹水區間 (End_TimeStamp)': group[-1]['TimeStamp'],
+                    '最大淹水高度(公分)': max_values,
+                    '淹水持續時間(分鐘)': (group[-1]['TimeStamp'] - group[0]['TimeStamp'])
+                })
+
+        if group_sums == []:
             group_sums.append({
                 'st_uuid': pump.st_uuid,
                 'pq_uuid': pump.pq_uuid,
                 '水位站編號': pump.st_name,
                 '所在地點': pump.location,
                 '所屬單位': pump.institution,
-                '淹水區間 (Start_TimeStamp)': group[0]['TimeStamp'],
-                '淹水區間 (End_TimeStamp)': group[-1]['TimeStamp'],
-                '最大淹水高度(公分)': max_values,
-                '淹水持續時間(分鐘)': (group[-1]['TimeStamp'] - group[0]['TimeStamp'])
+                '淹水區間 (Start_TimeStamp)': '',
+                '淹水區間 (End_TimeStamp)': '',
+                '最大淹水高度(公分)': '',
+                '淹水持續時間(分鐘)': '此時間區間無淹水'
             })
-
-        result_df = pd.DataFrame(group_sums)
-        return result_df
+            result_df = pd.DataFrame(group_sums)
+            return result_df
+        else:
+            result_df = pd.DataFrame(group_sums)
+            return result_df
 
 def calculate_opsUnits_pumpingVol(concat_df):
     # Group by Date
@@ -255,16 +280,11 @@ async def 抽水區間報表(
             datetime_start=datetime_start, datetime_end=datetime_end
         )
         df = get_PhysicalQuantity_history_data(headers, pump_item, st_name)
-        try:
-            df = df[["TimeStamp", "Value"]]
-            result_df = calculate_pump_runtime(pump_item, df, pump_interval_N_min)
-            f_name = F'{st_name}_{pq_uuid}.csv'
-            f_path = write_file(result_df, f_name)
-            if result_df.shape[0] > 0:
-                file_names.append(f_path)
-        except:
-            with open(temp_folder_path + '無歷史資料的監測站_PumpRuntime_report.txt', 'a') as f_out:
-                f_out.write(F"{st_name}\t{st_uuid}\n")
+        result_df = calculate_pump_runtime(pump_item, df, pump_interval_N_min)
+        f_name = F'{st_name}_{pq_uuid}.csv'
+        f_path = write_file(result_df, f_name)
+        if result_df.shape[0] > 0:
+            file_names.append(f_path)
 
     pdList = []
     for f_st_pump_runtime in file_names:
@@ -273,18 +293,7 @@ async def 抽水區間報表(
     concat_df = pd.concat(pdList)
     f_name = '合併_抽水區間報表.csv'
     f_path = write_file(concat_df, f_name)
-    file_names = [f_path]
-
-    if os.path.isfile(temp_folder_path + '無歷史資料的監測站_PumpRuntime_report.txt'):
-        file_names.append(temp_folder_path + '無歷史資料的監測站_PumpRuntime_report.txt')
-
-    if len(file_names) > 0:
-        zip_filepath, f_name = compress(file_names)
-        os.system(F"rm {temp_folder_path}無歷史資料的監測站_PumpRuntime_report.txt")
-        return FileResponse(zip_filepath, media_type='application/octet-stream', filename=f_name)
-    else:
-        result = {"msg": "NO DATA TO DOWNLOAD"}
-        return result
+    return FileResponse(f_path, media_type='application/octet-stream', filename=f_name)
 
 @router.post("/report/avail_rate", response_class=FileResponse)
 async def 日和月平均妥善率報表(
@@ -393,16 +402,11 @@ async def 最大淹水高度區間報表(
             datetime_start=datetime_start, datetime_end=datetime_end
         )
         df = get_PhysicalQuantity_history_data(headers, waterlevel_item, st_name)
-        try:
-            df = df[["TimeStamp", "Value"]]
-            result_df = calculate_max_flood_height(waterlevel_item, df, flood_height_interval_N_min)
-            f_name = F'{st_name}_{pq_uuid}.csv'
-            f_path = write_file(result_df, f_name)
-            if result_df.shape[0] > 0:
-                file_names.append(f_path)
-        except:
-            with open(temp_folder_path + '無歷史資料的監測站_MaxWaterLevel_report.txt', 'a') as f_out:
-                f_out.write(F"{st_name}\t{st_uuid}\n")
+        result_df = calculate_max_flood_height(waterlevel_item, df, flood_height_interval_N_min)
+        f_name = F'{st_name}_{pq_uuid}.csv'
+        f_path = write_file(result_df, f_name)
+        if result_df.shape[0] > 0:
+            file_names.append(f_path)
 
     pdList = []
     for f_st_max_flood_height in file_names:
@@ -411,18 +415,7 @@ async def 最大淹水高度區間報表(
     concat_df = pd.concat(pdList)
     f_name = '合併_最大淹水高度區間報表.csv'
     f_path = write_file(concat_df, f_name)
-    file_names = [f_path]
-
-    if os.path.isfile(temp_folder_path + '無歷史資料的監測站_MaxWaterLevel_report.txt'):
-        file_names.append(temp_folder_path + '無歷史資料的監測站_MaxWaterLevel_report.txt')
-
-    if len(file_names) > 0:
-        zip_filepath, f_name = compress(file_names)
-        os.system(F"rm {temp_folder_path}無歷史資料的監測站_MaxWaterLevel_report.txt")
-        return FileResponse(zip_filepath, media_type='application/octet-stream', filename=f_name)
-    else:
-        result = {"msg": "NO DATA TO DOWNLOAD"}
-        return result
+    return FileResponse(f_path, media_type='application/octet-stream', filename=f_name)
 
 @router.post("/report/operating_units_and_pumping_volumes", response_class=FileResponse)
 async def 運轉台數與抽水量的即時報表(
