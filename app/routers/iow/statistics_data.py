@@ -207,7 +207,7 @@ def calculate_opsUnits_pumpingVol(concat_df):
     return new_df
 
 @router.post("/report/pump_runtime", response_class=FileResponse)
-async def pump_runtime_report(
+async def 抽水區間報表(
     datetime_start: str,
     datetime_end: str,
     pump_interval_N_min: int = 10,
@@ -266,6 +266,15 @@ async def pump_runtime_report(
             with open(temp_folder_path + '無歷史資料的監測站_PumpRuntime_report.txt', 'a') as f_out:
                 f_out.write(F"{st_name}\t{st_uuid}\n")
 
+    pdList = []
+    for f_st_pump_runtime in file_names:
+        df_st_pump_runtime = pd.read_csv(f_st_pump_runtime)
+        pdList.append(df_st_pump_runtime)
+    concat_df = pd.concat(pdList)
+    f_name = '合併_抽水區間報表.csv'
+    f_path = write_file(concat_df, f_name)
+    file_names = [f_path]
+
     if os.path.isfile(temp_folder_path + '無歷史資料的監測站_PumpRuntime_report.txt'):
         file_names.append(temp_folder_path + '無歷史資料的監測站_PumpRuntime_report.txt')
 
@@ -278,7 +287,7 @@ async def pump_runtime_report(
         return result
 
 @router.post("/report/avail_rate", response_class=FileResponse)
-async def avail_rate_report(
+async def 日和月平均妥善率報表(
     datetime_start: str,
     datetime_end: str,
     N_records_per_day: int = 24,
@@ -336,7 +345,7 @@ async def avail_rate_report(
         return result
 
 @router.post("/report/max_flood_height", response_class=FileResponse)
-async def max_flood_height_report(
+async def 最大淹水高度區間報表(
     datetime_start: str,
     datetime_end: str,
     flood_height_interval_N_min: int = 8,
@@ -395,6 +404,15 @@ async def max_flood_height_report(
             with open(temp_folder_path + '無歷史資料的監測站_MaxWaterLevel_report.txt', 'a') as f_out:
                 f_out.write(F"{st_name}\t{st_uuid}\n")
 
+    pdList = []
+    for f_st_max_flood_height in file_names:
+        df_st_max_flood_height = pd.read_csv(f_st_max_flood_height)
+        pdList.append(df_st_max_flood_height)
+    concat_df = pd.concat(pdList)
+    f_name = '合併_最大淹水高度區間報表.csv'
+    f_path = write_file(concat_df, f_name)
+    file_names = [f_path]
+
     if os.path.isfile(temp_folder_path + '無歷史資料的監測站_MaxWaterLevel_report.txt'):
         file_names.append(temp_folder_path + '無歷史資料的監測站_MaxWaterLevel_report.txt')
 
@@ -407,7 +425,7 @@ async def max_flood_height_report(
         return result
 
 @router.post("/report/operating_units_and_pumping_volumes", response_class=FileResponse)
-async def operating_units_and_pumping_volumes_report(
+async def 運轉台數與抽水量的即時報表(
     datetime_start: str,
     datetime_end: str,
     pump_interval_N_min: int = 10,
@@ -479,3 +497,43 @@ async def operating_units_and_pumping_volumes_report(
     else:
         result = {"msg": "NO DATA TO DOWNLOAD"}
         return result
+
+@router.post("/report/available_pumps", response_class=FileResponse)
+async def 可調度抽水機的即時報表():
+    now = dt.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    MPD_url = "https://api.floodsolution.aiot.ing/api/v1/devices/MPD"
+    MPD_aiot_data = requests.get(MPD_url).json()
+    MPD_aiot_data = MPD_aiot_data['data']
+
+    MPDCY_url = "https://api.floodsolution.aiot.ing/api/v1/devices/MPDCY"
+    MPDCY_aiot_data = requests.get(MPDCY_url).json()
+    MPDCY_aiot_data = MPDCY_aiot_data['data']
+
+    st_dict = dict()
+    for st in MPD_aiot_data:
+        # 1 (未出勤)、2 (出勤中)、3 (抽水中)、4 (運送中)、5 (異常)
+        if (st['detailStatus'] == 1) or (st['detailStatus'] == 2):
+            st_dict[st['_id']] = {
+                "st_name": st['name'],
+                "st_uuid": st['_id'],
+                "lat": st['lat'],
+                "lon": st['lon'],
+                "location": st['county'] + st['town'] + st['village'],
+                "dev_type": st['type']
+            }
+    for st in MPDCY_aiot_data:
+        if (st['detailStatus'] == 1) or (st['detailStatus'] == 2):
+            st_dict[st['_id']] = {
+                "st_name": st['name'],
+                "st_uuid": st['_id'],
+                "lat": st['lat'],
+                "lon": st['lon'],
+                "location": st['county'] + st['town'] + st['village'],
+                "dev_type": st['type']
+            }
+
+    df = pd.DataFrame.from_dict(st_dict, orient='index')
+    f_name = F'可調度的抽水機報表_{now}.csv'
+    f_path = write_file(df, f_name)
+    return FileResponse(f_path, media_type='application/octet-stream', filename=f_name)
