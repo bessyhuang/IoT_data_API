@@ -99,17 +99,18 @@ def calculate_pump_runtime(pump, df, pump_interval_N_min):
             duration_sec = (group[-1]['TimeStamp'] - group[0]['TimeStamp']).total_seconds()
             pumping_volume = duration_sec * 0.3
             # sum_values = sum(item['Value'] for item in group)  # remove rule
-            group_sums.append({
-                'st_uuid': pump.st_uuid,
-                'pq_uuid': pump.pq_uuid,
-                '抽水機編號': pump.st_name,
-                '所在地點': pump.location,
-                '所屬單位': pump.institution,
-                '抽水區間 (Start_TimeStamp)': group[0]['TimeStamp'],
-                '抽水區間 (End_TimeStamp)': group[-1]['TimeStamp'],
-                '抽水量(立方公尺)': pumping_volume,
-                '抽水(分)': (group[-1]['TimeStamp'] - group[0]['TimeStamp'])
-            })
+            if pumping_volume > 0:
+                group_sums.append({
+                    'st_uuid': pump.st_uuid,
+                    'pq_uuid': pump.pq_uuid,
+                    '抽水機編號': pump.st_name,
+                    '所在地點': pump.location,
+                    '所屬單位': pump.institution,
+                    '抽水區間 (Start_TimeStamp)': group[0]['TimeStamp'],
+                    '抽水區間 (End_TimeStamp)': group[-1]['TimeStamp'],
+                    '抽水量(立方公尺)': pumping_volume,
+                    '抽水(分)': (group[-1]['TimeStamp'] - group[0]['TimeStamp'])
+                })
 
         result_df = pd.DataFrame(group_sums)
         return result_df
@@ -192,6 +193,18 @@ def calculate_max_flood_height(pump, df, flood_height_interval_N_min):
 
         result_df = pd.DataFrame(group_sums)
         return result_df
+
+def calculate_opsUnits_pumpingVol(concat_df):
+    # Group by Date
+    concat_df['日期'] = pd.to_datetime(concat_df['抽水區間 (Start_TimeStamp)'], format='mixed').dt.strftime('%Y-%m-%d')
+    new_df = concat_df.groupby('日期').agg({'抽水機編號': 'nunique', '抽水量(立方公尺)': 'sum'})
+    new_df = new_df.reset_index()
+    new_df = new_df.rename(columns={'抽水機編號': '運轉台數'})
+    # new_df.loc['Total'] = new_df.sum(numeric_only=True, axis=0)
+    new_df.loc['Total'] = new_df.sum()
+    new_df.loc[new_df.index[-1], '運轉台數'] = ''
+    new_df.loc[new_df.index[-1], '日期'] = '合計'
+    return new_df
 
 @router.post("/report/pump_runtime", response_class=FileResponse)
 async def pump_runtime_report(
@@ -388,6 +401,80 @@ async def max_flood_height_report(
     if len(file_names) > 0:
         zip_filepath, f_name = compress(file_names)
         os.system(F"rm {temp_folder_path}無歷史資料的監測站_MaxWaterLevel_report.txt")
+        return FileResponse(zip_filepath, media_type='application/octet-stream', filename=f_name)
+    else:
+        result = {"msg": "NO DATA TO DOWNLOAD"}
+        return result
+
+@router.post("/report/operating_units_and_pumping_volumes", response_class=FileResponse)
+async def operating_units_and_pumping_volumes_report(
+    datetime_start: str,
+    datetime_end: str,
+    pump_interval_N_min: int = 10,
+    st_pq_file: UploadFile = File(...)
+):
+    # Get IoW token
+    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+    token = response["access_token"]
+    headers = {"Accept": "application/json", "Authorization": "Bearer %s" % token}
+
+    # Write txt file to temp folder
+    try:
+        temp_folder_path = base_dir + "/temp/"
+        if not os.path.exists(temp_folder_path):
+            os.makedirs(temp_folder_path)
+        with open(temp_folder_path + st_pq_file.filename, 'wb') as f:
+            f.write(st_pq_file.file.read())
+    except Exception:
+        return {"message": "There was an error uploading the file"}
+
+    # Read txt file (One line, one station)
+    with open(temp_folder_path + st_pq_file.filename, 'r') as f:
+        content = f.readlines()
+
+    file_names = []
+    for line in content:
+        line = line.replace('\n', '').replace('\t', ',')
+        line = line.split(',')
+        st_uuid = line[0]
+        pq_uuid = line[1]
+
+        # API
+        s_response = get_Station_metadata(st_uuid, headers)
+        st_name = s_response['Name']
+
+        pump_item = Pump(
+            st_uuid=st_uuid, st_name=st_name, pq_uuid=pq_uuid,
+            datetime_start=datetime_start, datetime_end=datetime_end
+        )
+        df = get_PhysicalQuantity_history_data(headers, pump_item, st_name)
+        try:
+            df = df[["TimeStamp", "Value"]]
+            result_df = calculate_pump_runtime(pump_item, df, pump_interval_N_min)
+            f_name = F'{st_name}_{pq_uuid}.csv'
+            f_path = write_file(result_df, f_name)
+            if result_df.shape[0] > 0:
+                file_names.append(f_path)
+        except:
+            with open(temp_folder_path + '無歷史資料的監測站_OperatingUnits_and_PumpingVolumes_report.txt', 'a') as f_out:
+                f_out.write(F"{st_name}\t{st_uuid}\n")
+
+    pdList = []
+    for f_st_pump_runtime in file_names:
+        df_st_pump_runtime = pd.read_csv(f_st_pump_runtime)
+        pdList.append(df_st_pump_runtime)
+    concat_df = pd.concat(pdList)
+    result_df = calculate_opsUnits_pumpingVol(concat_df)
+    f_name = 'MPD_MPDCY_移動式抽水機_運轉台數及抽水量報表.csv'
+    f_path = write_file(result_df, f_name)
+    file_names.append(f_path)
+
+    if os.path.isfile(temp_folder_path + '無歷史資料的監測站_OperatingUnits_and_PumpingVolumes_report.txt'):
+        file_names.append(temp_folder_path + '無歷史資料的監測站_OperatingUnits_and_PumpingVolumes_report.txt')
+
+    if len(file_names) > 0:
+        zip_filepath, f_name = compress(file_names)
+        os.system(F"rm {temp_folder_path}無歷史資料的監測站_OperatingUnits_and_PumpingVolumes_report.txt")
         return FileResponse(zip_filepath, media_type='application/octet-stream', filename=f_name)
     else:
         result = {"msg": "NO DATA TO DOWNLOAD"}
