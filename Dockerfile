@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 # 
 COPY ./app /code/app
 COPY ./app/.env /code/.env
+COPY ./STATION_UUIDs /code/STATION_UUIDs
 EXPOSE 8000
 
 # 
