@@ -15,6 +15,7 @@ COPY ./app /code/app
 COPY ./app/.env /code/.env
 COPY ./STATION_UUIDs /code/STATION_UUIDs
 EXPOSE 8000
+EXPOSE 27017
 
 # 
 CMD ["fastapi", "run", "/code/app/main.py", "--port", "8000"]
