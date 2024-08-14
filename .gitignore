@@ -2,3 +2,5 @@ __pycache__
 myenv
 .mypy_cache
 temp/
+.vscode/
+.bessy.env
