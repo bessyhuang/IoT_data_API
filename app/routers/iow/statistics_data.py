@@ -32,16 +32,19 @@ headers = {"Accept": "application/json", "Authorization": "Bearer %s" % token}
 
 
 def get_country_town_village():
+    # Get aiot token
+    headers = {"Accept": "application/json", "Authorization": f"Bearer {ENV.get('AIOT_TOKEN')}"}
+
     RFD_url = "https://api.floodsolution.aiot.ing/api/v1/devices/RFD"
-    RFD_aiot_data = requests.get(RFD_url).json()
+    RFD_aiot_data = requests.get(RFD_url, headers=headers).json()
     RFD_aiot_data = RFD_aiot_data["data"]
 
     MPD_url = "https://api.floodsolution.aiot.ing/api/v1/devices/MPD"
-    MPD_aiot_data = requests.get(MPD_url).json()
+    MPD_aiot_data = requests.get(MPD_url, headers=headers).json()
     MPD_aiot_data = MPD_aiot_data["data"]
 
     MPDCY_url = "https://api.floodsolution.aiot.ing/api/v1/devices/MPDCY"
-    MPDCY_aiot_data = requests.get(MPDCY_url).json()
+    MPDCY_aiot_data = requests.get(MPDCY_url, headers=headers).json()
     MPDCY_aiot_data = MPDCY_aiot_data["data"]
 
     st_location_dict = dict()
@@ -525,12 +528,15 @@ async def 運轉台數與抽水量的即時報表(
 async def 可調度抽水機的即時報表():
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    # Get aiot token
+    headers = {"Accept": "application/json", "Authorization": f"Bearer {ENV.get('AIOT_TOKEN')}"}
+
     MPD_url = "https://api.floodsolution.aiot.ing/api/v1/devices/MPD"
-    MPD_aiot_data = requests.get(MPD_url).json()
+    MPD_aiot_data = requests.get(MPD_url, headers=headers).json()
     MPD_aiot_data = MPD_aiot_data["data"]
 
     MPDCY_url = "https://api.floodsolution.aiot.ing/api/v1/devices/MPDCY"
-    MPDCY_aiot_data = requests.get(MPDCY_url).json()
+    MPDCY_aiot_data = requests.get(MPDCY_url, headers=headers).json()
     MPDCY_aiot_data = MPDCY_aiot_data["data"]
 
     st_dict = {}
