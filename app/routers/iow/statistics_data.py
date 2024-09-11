@@ -33,7 +33,13 @@ headers = {"Accept": "application/json", "Authorization": "Bearer %s" % token}
 
 def get_country_town_village():
     # Get aiot token
-    headers = {"Accept": "application/json", "Authorization": f"Bearer {ENV.get('AIOT_TOKEN')}"}
+    AIOT_token_url = "https://api.floodsolution.aiot.ing/auth/v1/login"
+    body = {
+        "username": ENV.get('AIOT_username'),
+        "password": ENV.get('AIOT_password')
+    }
+    AIOT_token = requests.post(AIOT_token_url, json=body).json()["token"]
+    headers = {"Accept": "application/json", "Authorization": f"Bearer {AIOT_token}"}
 
     RFD_url = "https://api.floodsolution.aiot.ing/api/v1/devices/RFD"
     RFD_aiot_data = requests.get(RFD_url, headers=headers).json()
@@ -529,7 +535,13 @@ async def 可調度抽水機的即時報表():
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Get aiot token
-    headers = {"Accept": "application/json", "Authorization": f"Bearer {ENV.get('AIOT_TOKEN')}"}
+    AIOT_token_url = "https://api.floodsolution.aiot.ing/auth/v1/login"
+    body = {
+        "username": ENV.get('AIOT_username'),
+        "password": ENV.get('AIOT_password')
+    }
+    AIOT_token = requests.post(AIOT_token_url, json=body).json()["token"]
+    headers = {"Accept": "application/json", "Authorization": f"Bearer {AIOT_token}"}
 
     MPD_url = "https://api.floodsolution.aiot.ing/api/v1/devices/MPD"
     MPD_aiot_data = requests.get(MPD_url, headers=headers).json()
