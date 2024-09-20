@@ -44,6 +44,21 @@ def get_PhysicalQuantity_UUIDs(st_uuid, headers):
             pq_uuids_list.append(pq['Id'])
     return pq_uuids_list
 
+def get_PhysicalQuantity_latest_data(st_uuid, headers):
+    pq_API = f'LatestData/Read/Station/{st_uuid}/480'
+    try:
+        pq_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_API}', headers=headers)
+    except:
+        pq_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_API}', headers=headers)
+    pq_response.raise_for_status()
+    pq_response = pq_response.json()
+
+    pq_uuids_dict = defaultdict(dict)
+    if pq_response is not None:
+        for pq in pq_response:
+            pq_uuids_dict[pq['Id']]["Value"] = pq['Value']
+            pq_uuids_dict[pq['Id']]["TimeStamp"] = pq['TimeStamp']
+    return pq_uuids_dict
 
 def get_PhysicalQuantity_metadata(pq_uuid, headers):
     pq_metadata_API = f'PhysicalQuantity/Get/{pq_uuid}'
@@ -210,5 +225,60 @@ async def 監測站與物理量UUID對應表(
         merge_df = merge_df[new_columns]
 
     f_name = f'{device_type}_最新監測站與物理量UUID對應表.csv'
+    f_path = write_file(merge_df, f_name)
+    return FileResponse(f_path, media_type='application/octet-stream', filename=f_name)
+
+
+@router.post("/get_flood_detention_pool")
+async def 滯洪池即時水位(
+    client_id: str, client_secret: str
+):
+    # Get IoW token
+    PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
+    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+    token = response["access_token"]
+    headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
+
+    st_uuids_path = base_dir + "/STATION_UUIDs/滯洪池_stUUID_pqUUID_滯洪池底.txt"
+    with open(st_uuids_path, "r", encoding='utf-8') as f:
+        st_uuids_list = f.readlines()
+
+    FLOOD_DETENTION_POOL = defaultdict(dict)
+    merge_list = []
+
+    for row in st_uuids_list:
+        row = row.strip()
+        st_name, town, st_uuid, pq_uuid, pool_depth, levee_height, flood_detention_volume = row.split("\t")
+        pool_depth, levee_height, flood_detention_volume = map(float, [pool_depth, levee_height, flood_detention_volume])
+
+        FLOOD_DETENTION_POOL[st_uuid].update({
+            "滯洪池名稱": st_name,
+            "鄉鎮": town,
+            "pq_uuid": pq_uuid,
+            "滯洪池底(m)": pool_depth,
+            "堤頂高": levee_height,
+            "滯洪量(m3)": flood_detention_volume
+        })
+
+        # API
+        pq_uuid_dict = get_PhysicalQuantity_latest_data(st_uuid, headers)
+        if pq_uuid in pq_uuid_dict:
+            water_level = pq_uuid_dict[pq_uuid]["Value"]
+            FLOOD_DETENTION_POOL[st_uuid]["即時水位(m)"] = water_level
+            FLOOD_DETENTION_POOL[st_uuid]["TimeStamp"] = pq_uuid_dict[pq_uuid]["TimeStamp"]
+
+            # 公式： ((堤頂高 - 即時水位)/(堤頂高 - 滯洪池底))*滯洪量*0.7
+            estimated_remaining_flood_detention_volume = (
+                (levee_height - water_level)/(levee_height - pool_depth) * flood_detention_volume * 0.7
+            )
+            FLOOD_DETENTION_POOL[st_uuid]["預估剩餘滯洪量(m3)"] = round(estimated_remaining_flood_detention_volume, 1)
+        merge_list.append(FLOOD_DETENTION_POOL[st_uuid])
+
+    merge_df = pd.DataFrame(merge_list)
+    merge_df = merge_df[
+        ['滯洪池名稱', '鄉鎮', '滯洪量(m3)', '預估剩餘滯洪量(m3)', '即時水位(m)', '滯洪池底(m)', '堤頂高', 'TimeStamp']
+    ]
+
+    f_name = '滯洪池_即時水位報表.csv'
     f_path = write_file(merge_df, f_name)
     return FileResponse(f_path, media_type='application/octet-stream', filename=f_name)

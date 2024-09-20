@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Depends
 
-from .dependencies import get_query_token, get_token_header
-from .internal import admin
-from .routers.iow import history_data, latest_data, latest_data_from_db, statistics_data
+from app.dependencies import get_query_token, get_token_header
+from app.internal import admin
+from app.routers.iow import history_data, latest_data, latest_data_from_db, statistics_data
 
 
 app = FastAPI()
