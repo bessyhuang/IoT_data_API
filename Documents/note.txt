@@ -1,6 +1,10 @@
 docker build -t fastapi_image .
 docker run -d --name fastapi_service -p 8000:8000 fastapi_image
 
+---
+Note: set memory & memory-swap
+docker run -d --name fastapi_service --memory 9g --memory-swap 10g -p 8000:8000 fastapi_image
 
+---
 Windows CMD:
 (myenv) fastapi dev app/main.py
