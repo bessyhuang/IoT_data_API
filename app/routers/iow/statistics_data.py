@@ -1,6 +1,7 @@
 """Statistical Data API"""
 
 import os
+import pytz
 import requests
 import pandas as pd
 from datetime import datetime, timedelta
@@ -62,11 +63,37 @@ def get_country_town_village():
         st_location_dict[st["_id"]] = st["county"] + st["town"] + st["village"]
     return st_location_dict
 
+def get_date_list(start_time, end_time):
+    date_list = []
+
+    # First day (from start_time to start of next day)
+    start_of_next_day = pytz.timezone('Asia/Taipei').localize(
+        datetime.combine(start_time.date() + timedelta(days=1), datetime.min.time())
+    )
+    date_list.append((start_time, start_of_next_day))
+
+    # Middle days (full: day1 00:00:00 to day2 00:00:00)
+    current_date = start_time.date() + timedelta(days=1)
+    while current_date < end_time.date():
+        start_of_day = pytz.timezone('Asia/Taipei').localize(
+            datetime.combine(current_date, datetime.min.time())
+        )
+        end_of_day = pytz.timezone('Asia/Taipei').localize(
+            datetime.combine(current_date + timedelta(days=1), datetime.min.time())
+        )
+        date_list.append((start_of_day, end_of_day))
+        current_date += timedelta(days=1)
+
+    # Last day (from start of the day to end_time)
+    start_of_last_day = pytz.timezone('Asia/Taipei').localize(
+        datetime.combine(end_time.date(), datetime.min.time())
+    )
+    date_list.append((start_of_last_day, end_time))
+    return date_list
 
 def calculate_pump_runtime(pump, df, pump_interval_N_min):
     if "Value" not in df:
-        group_sums = []
-        group_sums.append(
+        return pd.DataFrame([
             {
                 "st_uuid": pump.st_uuid,
                 "pq_uuid": pump.pq_uuid,
@@ -78,16 +105,15 @@ def calculate_pump_runtime(pump, df, pump_interval_N_min):
                 "抽水量(立方公尺)": "",
                 "抽水(分)": "此時間區間無歷史資料",
             }
-        )
-        result_df = pd.DataFrame(group_sums)
-        return result_df
+        ])
 
     # Initialize variables to track groups
+    df["TimeStamp"] = pd.to_datetime(df["TimeStamp"], format="ISO8601")
+    filtered_data = df[df["Value"] > 0].reset_index(drop=True)
+
     groups = []
     current_group = []
     prev_timestamp = None
-    df["TimeStamp"] = pd.to_datetime(df["TimeStamp"], format="ISO8601")
-    filtered_data = df[df["Value"] > 0].reset_index(drop=True)
 
     # Group consecutive timestamps within N mins interval
     for i, row in filtered_data.iterrows():
@@ -105,23 +131,52 @@ def calculate_pump_runtime(pump, df, pump_interval_N_min):
     # Sum values in each group
     group_sums = []
     for group in groups:
-        duration_sec = (group[-1]["TimeStamp"] - group[0]["TimeStamp"]).total_seconds()
-        pumping_volume = duration_sec * 0.3
-        # sum_values = sum(item['Value'] for item in group)  # remove rule
-        if pumping_volume > 0:
-            group_sums.append(
-                {
-                    "st_uuid": pump.st_uuid,
-                    "pq_uuid": pump.pq_uuid,
-                    "抽水機編號": pump.st_name,
-                    "所在地點": pump.location,
-                    "所屬單位": pump.institution,
-                    "抽水區間 (Start_TimeStamp)": group[0]["TimeStamp"],
-                    "抽水區間 (End_TimeStamp)": group[-1]["TimeStamp"],
-                    "抽水量(立方公尺)": pumping_volume,
-                    "抽水(分)": (group[-1]["TimeStamp"] - group[0]["TimeStamp"]),
-                }
-            )
+        start_time = group[0]["TimeStamp"]
+        end_time = group[-1]["TimeStamp"]
+
+        # Handle cases where group spans multiple days
+        if start_time.date() != end_time.date():
+            date_list = get_date_list(start_time, end_time)
+            for date_interval in date_list:
+                date_1, date_2 = date_interval
+                duration_1 = (date_2 - date_1).total_seconds()
+                pumping_volume_1 = duration_1 * 0.3
+                
+                # 略過不計：抽水小於等於10秒(抽水量小於等於3)
+                if pumping_volume_1 > 3:
+                    group_sums.append(
+                        {
+                            "st_uuid": pump.st_uuid,
+                            "pq_uuid": pump.pq_uuid,
+                            "抽水機編號": pump.st_name,
+                            "所在地點": pump.location,
+                            "所屬單位": pump.institution,
+                            "抽水區間 (Start_TimeStamp)": date_1,
+                            "抽水區間 (End_TimeStamp)": date_2,
+                            "抽水量(立方公尺)": pumping_volume_1,
+                            "抽水(分)": timedelta(seconds=duration_1),
+                        }
+                    )
+        else:
+            # Single interval case (no date boundary crossing)
+            duration_sec = (end_time - start_time).total_seconds()
+            pumping_volume = duration_sec * 0.3
+            
+            # 略過不計：抽水小於等於10秒(抽水量小於等於3)
+            if pumping_volume > 3:
+                group_sums.append(
+                    {
+                        "st_uuid": pump.st_uuid,
+                        "pq_uuid": pump.pq_uuid,
+                        "抽水機編號": pump.st_name,
+                        "所在地點": pump.location,
+                        "所屬單位": pump.institution,
+                        "抽水區間 (Start_TimeStamp)": start_time,
+                        "抽水區間 (End_TimeStamp)": end_time,
+                        "抽水量(立方公尺)": pumping_volume,
+                        "抽水(分)": timedelta(seconds=duration_sec),
+                    }
+                )
 
     if group_sums == []:
         group_sums.append(
@@ -137,8 +192,7 @@ def calculate_pump_runtime(pump, df, pump_interval_N_min):
                 "抽水(分)": "此時間區間_無抽水",
             }
         )
-    result_df = pd.DataFrame(group_sums)
-    return result_df
+    return pd.DataFrame(group_sums)
 
 
 def calculate_avail_rate(item, df, N_records_per_day):
