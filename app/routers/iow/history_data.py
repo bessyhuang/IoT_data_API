@@ -28,6 +28,26 @@ PAYLOAD = {
 }
 
 
+def get_PhysicalQuantity_history_data_within12hr(headers, item, st_name):
+    All_pq_Dict = dict()
+    All_pq_Dict[item.pq_uuid] = []
+
+    pq_history_API = f'TimeSeriesData/ReadRawData/{item.pq_uuid}/{item.datetime_start}/{item.datetime_end}/true/480'
+    try:
+        pq_history_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_history_API}', headers=headers)
+    except:
+        pq_history_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_history_API}', headers=headers)
+    pq_history_response.raise_for_status()
+    pq_history_response = pq_history_response.json()
+
+    history = pq_history_response["DataPoints"]
+    for h in history:
+        All_pq_Dict[item.pq_uuid].append(h)
+    df = pd.DataFrame.from_dict(All_pq_Dict[item.pq_uuid])
+    df['Station'] = st_name
+    return df
+
+
 def get_PhysicalQuantity_history_data(headers, item, st_name):
     All_pq_Dict = dict()
     All_pq_Dict[item.pq_uuid] = []

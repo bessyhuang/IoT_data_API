@@ -4,15 +4,15 @@ import os
 import pytz
 import requests
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from decouple import Config, RepositoryEnv
 
 from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import FileResponse
 
 from app.schemas import Item, Metadata
-from app.routers.iow.latest_data import get_Station_metadata, write_file
-from app.routers.iow.history_data import get_PhysicalQuantity_history_data, compress
+from app.routers.iow.latest_data import get_Station_metadata, write_file, get_PhysicalQuantity_latest_data
+from app.routers.iow.history_data import get_PhysicalQuantity_history_data, get_PhysicalQuantity_history_data_within12hr, compress
 
 
 router = APIRouter()
@@ -90,6 +90,55 @@ def get_date_list(start_time, end_time):
     )
     date_list.append((start_of_last_day, end_time))
     return date_list
+
+def transform_avail_pump(pump, df, data_time):
+    if "Value" not in df:
+        if data_time < pump.datetime_start:
+            return {
+                "st_uuid": pump.st_uuid,
+                "pq_uuid": pump.pq_uuid,
+                "st_name": pump.st_name,
+                "近12小時的時間區間": f"{pump.datetime_start} ~ {pump.datetime_end}",
+                "近12小時是否曾抽水": "無資料",
+                "近12小時是否有歷史資料": "無資料",
+                "最近一筆資料的上傳時間": data_time,
+                "是否可被調度": "Y"
+            }
+        else:
+            return {
+                "st_uuid": pump.st_uuid,
+                "pq_uuid": "",
+                "st_name": pump.st_name,
+                "近12小時的時間區間": f"{pump.datetime_start} ~ {pump.datetime_end}",
+                "近12小時是否曾抽水": "無資料",
+                "近12小時是否有歷史資料": "無資料",
+                "最近一筆資料的上傳時間": data_time,
+                "是否可被調度": "Y"
+            }
+
+    if (df["Value"] > 0).any():
+        return {
+            "st_uuid": pump.st_uuid,
+            "pq_uuid": pump.pq_uuid,
+            "st_name": pump.st_name,
+            "近12小時的時間區間": f"{pump.datetime_start} ~ {pump.datetime_end}",
+            "近12小時是否曾抽水": "Y",
+            "近12小時是否有歷史資料": "Y",
+            "最近一筆資料的上傳時間": data_time,
+            "是否可被調度": "N"
+        }
+    else:
+        return {
+            "st_uuid": pump.st_uuid,
+            "pq_uuid": pump.pq_uuid,
+            "st_name": pump.st_name,
+            "近12小時的時間區間": f"{pump.datetime_start} ~ {pump.datetime_end}",
+            "近12小時是否曾抽水": "N",
+            "近12小時是否有歷史資料": "Y",
+            "最近一筆資料的上傳時間": data_time,
+            "是否可被調度": "Y"
+        }
+
 
 def calculate_pump_runtime(pump, df, pump_interval_N_min):
     if "Value" not in df:
@@ -631,4 +680,57 @@ async def 可調度抽水機的即時報表():
     df = pd.DataFrame.from_dict(st_dict, orient="index")
     f_name = f'可調度的抽水機報表_{now}.csv'
     f_path = write_file(df, f_name)
+    return FileResponse(f_path, media_type="application/octet-stream", filename=f_name)
+
+
+@router.post("/report/available_pumps_within12hr", response_class=FileResponse)
+async def 十二小時內無抽水紀錄_可調度抽水機的即時報表():
+    now = datetime.now()
+    start_time = pytz.timezone('Asia/Taipei').localize(
+        datetime.combine(now - timedelta(days=1), time(now.hour, 0, 0))
+        ).strftime("%Y-%m-%dT%H.00.00")
+    end_time = datetime.now().strftime("%Y-%m-%dT%H.00.00")
+
+    # STATION_UUIDs (get from local)
+    st_uuids_path = base_dir + "/STATION_UUIDs/MPD_MPDCY_all_info.csv"  #
+    df = pd.read_csv(st_uuids_path, encoding='utf-8')
+
+    # Get IoW token
+    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+    token = response["access_token"]
+    headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
+
+    st_dict = {}
+    for index, row in df.iterrows():
+        if (pd.isna(row['抽水量']) == True) and (pd.isna(row['出水量']) == True):
+            data = {"Station": row['st_name']}
+            df = pd.DataFrame(data, index=[0])
+            pq_uuid = row['經度']
+            pump_item = Metadata(
+                st_uuid=row['st_uuid'],
+                st_name=row['st_name'],
+                pq_uuid=pq_uuid,
+                datetime_start=start_time,
+                datetime_end=end_time,
+            )
+        else:
+            if pd.isna(row['抽水量']) == False:
+                pq_uuid = row['抽水量']
+            elif pd.isna(row['出水量']) == False:
+                pq_uuid = row['出水量']
+            pump_item = Metadata(
+                st_uuid=row['st_uuid'],
+                st_name=row['st_name'],
+                pq_uuid=pq_uuid,
+                datetime_start=start_time,
+                datetime_end=end_time,
+            )
+            df = get_PhysicalQuantity_history_data_within12hr(headers, pump_item, row['st_name'])
+        pq_uuid_dict = get_PhysicalQuantity_latest_data(row['st_uuid'], headers)
+        data_time = pq_uuid_dict[pq_uuid]["TimeStamp"].replace("+08:00", "")
+        result_dict = transform_avail_pump(pump_item, df, data_time)
+        st_dict[row['st_uuid']] = result_dict
+    avail_pump_df = pd.DataFrame.from_dict(st_dict, orient="index")
+    f_name = f'十二小時內無抽水紀錄_可調度的抽水機報表_{now}.csv'
+    f_path = write_file(avail_pump_df, f_name)
     return FileResponse(f_path, media_type="application/octet-stream", filename=f_name)
