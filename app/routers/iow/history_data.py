@@ -2,6 +2,8 @@
 
 from decouple import Config, RepositoryEnv
 from typing import Annotated
+from datetime import datetime, timedelta
+from pymongo import MongoClient
 import pandas as pd
 import requests
 import zipfile
@@ -26,6 +28,10 @@ PAYLOAD = {
     "client_id": ENV.get("API_CLIENT_ID"),
     "client_secret": ENV.get("API_CLIENT_SECRET"),
 }
+
+# Get IoW metadata from DB
+HISTORY_dbClient = MongoClient(ENV.get('HISTORY_DB_HOST_PORT'), username=ENV.get('HISTORY_DB_USER'), password=ENV.get('HISTORY_DB_PASSWORD'), authSource=ENV.get('HISTORY_DB_AUTH_SOURCE'))
+HISTORY_db = HISTORY_dbClient.iow
 
 
 def get_PhysicalQuantity_history_data_within12hr(headers, item, st_name):
@@ -163,3 +169,27 @@ async def download_multiple_stations_raw_data(
         file_names.append(f_path)
     zip_filepath, f_name = compress(file_names)
     return FileResponse(zip_filepath, media_type='application/octet-stream', filename=f_name)
+
+
+@router.post("/report/avail_rate_daily", response_class=FileResponse)
+async def 日妥善率歷史報表(
+    datetime_start: str,
+    datetime_end: str,
+):
+    format_datetime_start = datetime.strptime(datetime_start, '%Y-%m-%d') + timedelta(hours=0, minutes=0, seconds=0)
+    format_datetime_end = datetime.strptime(datetime_end, '%Y-%m-%d') + timedelta(hours=23, minutes=59, seconds=59)
+    data = list(HISTORY_db.avail_rate.find(
+        {
+            "date": {
+                "$gte": format_datetime_start,
+                "$lte": format_datetime_end
+            }
+        },
+        {
+            "_id": 0, "date": 0
+        }
+    ))
+    df = pd.DataFrame.from_dict(data)
+    f_name = f'日妥善率歷史報表_{datetime_start}_{datetime_end}.csv'
+    f_path = write_file(df, f_name)
+    return FileResponse(f_path, media_type="application/octet-stream", filename=f_name)
