@@ -9,6 +9,7 @@ import requests
 import zipfile
 import string
 import random
+import time
 import os
 
 from fastapi import APIRouter, Body, File, UploadFile
@@ -34,44 +35,74 @@ HISTORY_dbClient = MongoClient(ENV.get('HISTORY_DB_HOST_PORT'), username=ENV.get
 HISTORY_db = HISTORY_dbClient.iow
 
 
-def get_PhysicalQuantity_history_data_within12hr(headers, item, st_name):
+def get_PhysicalQuantity_history_data_within12hr(
+    headers, client_id, client_secret, item, st_name, max_retries=5, delay=4
+):
     All_pq_Dict = dict()
     All_pq_Dict[item.pq_uuid] = []
 
     pq_history_API = f'TimeSeriesData/ReadRawData/{item.pq_uuid}/{item.datetime_start}/{item.datetime_end}/true/480'
-    try:
-        pq_history_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_history_API}', headers=headers)
-    except:
-        pq_history_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_history_API}', headers=headers)
-    pq_history_response.raise_for_status()
-    pq_history_response = pq_history_response.json()
+    for attempt in range(max_retries):
+        try:
+            pq_history_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_history_API}', headers=headers)
+            pq_history_response.raise_for_status()
+            pq_history_response = pq_history_response.json()
 
-    history = pq_history_response["DataPoints"]
-    for h in history:
-        All_pq_Dict[item.pq_uuid].append(h)
-    df = pd.DataFrame.from_dict(All_pq_Dict[item.pq_uuid])
-    df['Station'] = st_name
-    return df
+            history = pq_history_response["DataPoints"]
+            for h in history:
+                All_pq_Dict[item.pq_uuid].append(h)
+            df = pd.DataFrame.from_dict(All_pq_Dict[item.pq_uuid])
+            df['Station'] = st_name
+            return df
+
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:  # Retry if not the last attempt
+                print(f"【 No.{attempt + 1} 】 Retrying in {delay} seconds...")
+                time.sleep(delay)
+                # Get IoW token
+                PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
+                response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+                token = response["access_token"]
+                headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
+            else:
+                raise
+    return None
 
 
-def get_PhysicalQuantity_history_data(headers, item, st_name):
+def get_PhysicalQuantity_history_data(
+    headers, client_id, client_secret, item, st_name, max_retries=5, delay=4
+):
     All_pq_Dict = dict()
     All_pq_Dict[item.pq_uuid] = []
 
     pq_history_API = f'TimeSeriesData/ReadRawData/{item.pq_uuid}/{item.datetime_start}T00.00.00/{item.datetime_end}T23.59.59/true/480'
-    try:
-        pq_history_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_history_API}', headers=headers)
-    except:
-        pq_history_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_history_API}', headers=headers)
-    pq_history_response.raise_for_status()
-    pq_history_response = pq_history_response.json()
+    for attempt in range(max_retries):
+        try:
+            pq_history_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_history_API}', headers=headers)
+            pq_history_response.raise_for_status()
+            pq_history_response = pq_history_response.json()
 
-    history = pq_history_response["DataPoints"]
-    for h in history:
-        All_pq_Dict[item.pq_uuid].append(h)
-    df = pd.DataFrame.from_dict(All_pq_Dict[item.pq_uuid])
-    df['Station'] = st_name
-    return df
+            history = pq_history_response["DataPoints"]
+            for h in history:
+                All_pq_Dict[item.pq_uuid].append(h)
+            df = pd.DataFrame.from_dict(All_pq_Dict[item.pq_uuid])
+            df['Station'] = st_name
+            return df
+
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:  # Retry if not the last attempt
+                print(f"【 No.{attempt + 1} 】 Retrying in {delay} seconds...")
+                time.sleep(delay)
+                # Get IoW token
+                PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
+                response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+                token = response["access_token"]
+                headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
+            else:
+                raise
+    return None
 
 
 def compress(file_names):

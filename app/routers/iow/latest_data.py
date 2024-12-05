@@ -4,6 +4,7 @@ from collections import defaultdict
 import pandas as pd
 import requests
 import json
+import time
 import os
 
 from fastapi import APIRouter, File, UploadFile, Query
@@ -13,65 +14,129 @@ router = APIRouter()
 base_dir = os.getcwd()
 
 
-def get_Station_metadata(st_uuid, headers):
+def get_Station_metadata(
+    st_uuid, headers, client_id, client_secret, max_retries=5, delay=4
+):
     s_API = f'Station/Get/{st_uuid}'
-    try:
-        s_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{s_API}', headers=headers)
-    except:
-        s_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{s_API}', headers=headers)
-    s_response.raise_for_status()
-    s_response = s_response.json()
 
-    if s_response["JsonProperties"] is not None:
-        json_object_JsonProperties = json.loads(s_response["JsonProperties"])
-        del s_response["JsonProperties"]
-        s_response["JsonProperties"] = json_object_JsonProperties
-    return s_response
+    for attempt in range(max_retries):
+        try:
+            s_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{s_API}', headers=headers)
+            s_response.raise_for_status()
+            s_response = s_response.json()
 
+            if s_response.get("JsonProperties") is not None:
+                json_object_JsonProperties = json.loads(s_response["JsonProperties"])
+                del s_response["JsonProperties"]
+                s_response["JsonProperties"] = json_object_JsonProperties
+            return s_response
 
-def get_PhysicalQuantity_UUIDs(st_uuid, headers):
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:  # Retry if not the last attempt
+                print(f"【 No.{attempt + 1} 】 Retrying in {delay} seconds...")
+                time.sleep(delay)
+                # Get IoW token
+                PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
+                response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+                token = response["access_token"]
+                headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
+                continue
+    return None
+
+def get_PhysicalQuantity_UUIDs(
+    st_uuid, headers, client_id, client_secret, max_retries=5, delay=4
+):
     pq_API = f'LatestData/Read/Station/{st_uuid}/480'
-    try:
-        pq_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_API}', headers=headers)
-    except:
-        pq_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_API}', headers=headers)
-    pq_response.raise_for_status()
-    pq_response = pq_response.json()
 
-    pq_uuids_list = []
-    if pq_response is not None:
-        for pq in pq_response:
-            pq_uuids_list.append(pq['Id'])
-    return pq_uuids_list
+    for attempt in range(max_retries):
+        try:
+            pq_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_API}', headers=headers)
+            pq_response.raise_for_status()
+            pq_response = pq_response.json()
 
-def get_PhysicalQuantity_latest_data(st_uuid, headers):
+            pq_uuids_list = []
+            if pq_response is not None:
+                for pq in pq_response:
+                    pq_uuids_list.append(pq['Id'])
+            return pq_uuids_list
+
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:  # Retry if not the last attempt
+                print(f"【 No.{attempt + 1} 】 Retrying in {delay} seconds...")
+                time.sleep(delay)
+                # Get IoW token
+                PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
+                response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+                token = response["access_token"]
+                headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
+            else:
+                raise
+    return None
+
+def get_PhysicalQuantity_latest_data(
+    st_uuid, headers, client_id, client_secret, max_retries=5, delay=4
+):
     pq_API = f'LatestData/Read/Station/{st_uuid}/480'
-    try:
-        pq_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_API}', headers=headers)
-    except:
-        pq_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_API}', headers=headers)
-    pq_response.raise_for_status()
-    pq_response = pq_response.json()
 
-    pq_uuids_dict = defaultdict(dict)
-    if pq_response is not None:
-        for pq in pq_response:
-            pq_uuids_dict[pq['Id']]["Value"] = pq['Value']
-            pq_uuids_dict[pq['Id']]["TimeStamp"] = pq['TimeStamp']
-    return pq_uuids_dict
+    for attempt in range(max_retries):
+        try:
+            pq_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_API}', headers=headers)
+            pq_response.raise_for_status()
+            pq_response = pq_response.json()
 
-def get_PhysicalQuantity_metadata(pq_uuid, headers):
+            pq_uuids_dict = defaultdict(dict)
+            if pq_response is not None:
+                for pq in pq_response:
+                    pq_uuids_dict[pq['Id']]["Value"] = pq['Value']
+                    pq_uuids_dict[pq['Id']]["TimeStamp"] = pq['TimeStamp']
+            return pq_uuids_dict
+
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:  # Retry if not the last attempt
+                print(f"【 No.{attempt + 1} 】 Retrying in {delay} seconds...")
+                time.sleep(delay)
+                # Get IoW token
+                PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
+                response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+                token = response["access_token"]
+                headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
+            else:
+                raise
+    return None
+
+def get_PhysicalQuantity_metadata(
+    pq_uuid, headers, client_id, client_secret, max_retries=5, delay=4
+):
     pq_metadata_API = f'PhysicalQuantity/Get/{pq_uuid}'
-    pq_metadata_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_metadata_API}', headers=headers)
-    pq_metadata_response.raise_for_status()
-    pq_metadata_response = pq_metadata_response.json()
 
-    if pq_metadata_response["JsonProerties"] is not None:
-        json_object_JsonProperties = json.loads(pq_metadata_response["JsonProerties"])
-        del pq_metadata_response["JsonProerties"]
-        pq_metadata_response["JsonProerties"] = json_object_JsonProperties
-    return pq_metadata_response
+    for attempt in range(max_retries):
+        try:
+            pq_metadata_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_metadata_API}', headers=headers)
+            pq_metadata_response.raise_for_status()
+            pq_metadata_response = pq_metadata_response.json()
 
+            if pq_metadata_response["JsonProerties"] is not None:
+                json_object_JsonProperties = json.loads(pq_metadata_response["JsonProerties"])
+                del pq_metadata_response["JsonProerties"]
+                pq_metadata_response["JsonProerties"] = json_object_JsonProperties
+            return pq_metadata_response
+
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:  # Retry if not the last attempt
+                print(f"【 No.{attempt + 1} 】 Retrying in {delay} seconds...")
+                time.sleep(delay)
+                # Get IoW token
+                PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
+                response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+                token = response["access_token"]
+                headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
+            else:
+                raise
+    return None
 
 def write_file(data, filename):
     file_type = filename.split(".")[-1]
@@ -98,8 +163,8 @@ async def lookup_physical_quantity_list(
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
     # API
-    s_response = get_Station_metadata(st_uuid, headers)
-    pq_uuid_list = get_PhysicalQuantity_UUIDs(st_uuid, headers)
+    s_response = await get_Station_metadata(st_uuid, headers, client_id, client_secret)
+    pq_uuid_list = await get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
     return {"st_metadata": s_response, "pq_list": pq_uuid_list}
 
 
@@ -114,12 +179,12 @@ async def lookup_station_metadata(
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
     # API
-    s_response = get_Station_metadata(st_uuid, headers)
-    pq_uuid_list = get_PhysicalQuantity_UUIDs(st_uuid, headers)
+    s_response = await get_Station_metadata(st_uuid, headers, client_id, client_secret)
+    pq_uuid_list = await get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
     pq_metadata = []
     if pq_uuid_list:
         for pq_uuid in pq_uuid_list:
-            data = get_PhysicalQuantity_metadata(pq_uuid, headers)
+            data = await get_PhysicalQuantity_metadata(pq_uuid, headers, client_id, client_secret)
             pq_metadata.append(data)
     return {"st_metadata": s_response, "pq_list": pq_uuid_list, "pq_metadata": pq_metadata}
 
@@ -149,7 +214,7 @@ async def download_station_and_physical_quantity_relation(client_id: str, client
     data = {}
     for st_uuid in content:
         st_uuid = st_uuid.replace("\n", "")
-        pq_list = get_PhysicalQuantity_UUIDs(st_uuid, headers)
+        pq_list = await get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
         data[st_uuid] = pq_list
 
     # Write json file
@@ -178,14 +243,14 @@ async def 監測站與物理量UUID對應表(
     data = defaultdict(dict)
     merge_list = []
     for st_uuid in st_uuids_list:
-        s_response = get_Station_metadata(st_uuid, headers)
-        pq_uuid_list = get_PhysicalQuantity_UUIDs(st_uuid, headers)
+        s_response = await get_Station_metadata(st_uuid, headers, client_id, client_secret)
+        pq_uuid_list = await get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
         data[st_uuid]["st_uuid"] = st_uuid
         data[st_uuid]["st_name"] = s_response["Name"]
 
         if pq_uuid_list:
             for pq_uuid in pq_uuid_list:
-                pq_metadata_response = get_PhysicalQuantity_metadata(pq_uuid, headers)
+                pq_metadata_response = await get_PhysicalQuantity_metadata(pq_uuid, headers, client_id, client_secret)
                 PQ_desc = pq_metadata_response["Description"]
                 PQ_name = pq_metadata_response["Name"]
 
@@ -261,7 +326,7 @@ async def 滯洪池即時水位(
         })
 
         # API
-        pq_uuid_dict = get_PhysicalQuantity_latest_data(st_uuid, headers)
+        pq_uuid_dict = get_PhysicalQuantity_latest_data(st_uuid, headers, client_id, client_secret)
         if pq_uuid in pq_uuid_dict:
             water_level = pq_uuid_dict[pq_uuid]["Value"]
             FLOOD_DETENTION_POOL[st_uuid]["即時水位(m)"] = water_level

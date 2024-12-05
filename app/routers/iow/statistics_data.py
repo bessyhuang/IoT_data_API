@@ -400,7 +400,7 @@ async def 抽水區間報表(
         pq_uuid = line[1]
 
         # API
-        s_response = get_Station_metadata(st_uuid, headers)
+        s_response = get_Station_metadata(st_uuid, headers, PAYLOAD["client_id"], PAYLOAD["client_secret"])
         st_name = s_response["Name"]
 
         pump_item = Metadata(
@@ -412,7 +412,7 @@ async def 抽水區間報表(
             datetime_start=datetime_start,
             datetime_end=datetime_end,
         )
-        df = get_PhysicalQuantity_history_data(headers, pump_item, st_name)
+        df = get_PhysicalQuantity_history_data(headers, PAYLOAD["client_id"], PAYLOAD["client_secret"], pump_item, st_name)
         result_df = calculate_pump_runtime(pump_item, df, pump_interval_N_min)
         f_name = f'{st_name}_{pq_uuid}.csv'
         f_path = write_file(result_df, f_name)
@@ -458,7 +458,7 @@ async def 日和月平均妥善率報表(
         pq_uuid = line[1]
 
         # API
-        s_response = get_Station_metadata(st_uuid, headers)
+        s_response = get_Station_metadata(st_uuid, headers, PAYLOAD["client_id"], PAYLOAD["client_secret"])
         st_name = s_response["Name"]
 
         item = Item(
@@ -467,7 +467,7 @@ async def 日和月平均妥善率報表(
             st_uuid=st_uuid,
             pq_uuid=pq_uuid,
         )
-        df = get_PhysicalQuantity_history_data(headers, item, st_name)
+        df = get_PhysicalQuantity_history_data(headers, PAYLOAD["client_id"], PAYLOAD["client_secret"], item, st_name)
         try:
             df = df[["TimeStamp", "Value"]]
             result_df = calculate_avail_rate(item, df, N_records_per_day)
@@ -526,7 +526,7 @@ async def 最大淹水高度區間報表(
         pq_uuid = line[1]
 
         # API
-        s_response = get_Station_metadata(st_uuid, headers)
+        s_response = get_Station_metadata(st_uuid, headers, PAYLOAD["client_id"], PAYLOAD["client_secret"])
         st_name = s_response["Name"]
 
         rfd_item = Metadata(
@@ -538,7 +538,7 @@ async def 最大淹水高度區間報表(
             datetime_start=datetime_start,
             datetime_end=datetime_end,
         )
-        df = get_PhysicalQuantity_history_data(headers, rfd_item, st_name)
+        df = get_PhysicalQuantity_history_data(headers, PAYLOAD["client_id"], PAYLOAD["client_secret"], rfd_item, st_name)
         result_df = calculate_max_flood_height(rfd_item, df, flood_height_interval_N_min)
         f_name = f'{st_name}_{pq_uuid}.csv'
         f_path = write_file(result_df, f_name)
@@ -589,7 +589,7 @@ async def 運轉台數與抽水量的即時報表(
         pq_uuid = line[1]
 
         # API
-        s_response = get_Station_metadata(st_uuid, headers)
+        s_response = get_Station_metadata(st_uuid, headers, PAYLOAD["client_id"], PAYLOAD["client_secret"])
         st_name = s_response["Name"]
 
         pump_item = Metadata(
@@ -599,7 +599,7 @@ async def 運轉台數與抽水量的即時報表(
             datetime_start=datetime_start,
             datetime_end=datetime_end,
         )
-        df = get_PhysicalQuantity_history_data(headers, pump_item, st_name)
+        df = get_PhysicalQuantity_history_data(headers, PAYLOAD["client_id"], PAYLOAD["client_secret"], pump_item, st_name)
         try:
             df = df[["TimeStamp", "Value"]]
             result_df = calculate_pump_runtime(pump_item, df, pump_interval_N_min)
@@ -725,8 +725,8 @@ async def 十二小時內無抽水紀錄_可調度抽水機的即時報表():
                 datetime_start=start_time,
                 datetime_end=end_time,
             )
-            df = get_PhysicalQuantity_history_data_within12hr(headers, pump_item, row['st_name'])
-        pq_uuid_dict = get_PhysicalQuantity_latest_data(row['st_uuid'], headers)
+            df = get_PhysicalQuantity_history_data_within12hr(headers, PAYLOAD["client_id"], PAYLOAD["client_secret"], pump_item, row['st_name'])
+        pq_uuid_dict = get_PhysicalQuantity_latest_data(row['st_uuid'], headers, PAYLOAD["client_id"], PAYLOAD["client_secret"])
         data_time = pq_uuid_dict[pq_uuid]["TimeStamp"].replace("+08:00", "")
         result_dict = transform_avail_pump(pump_item, df, data_time)
         st_dict[row['st_uuid']] = result_dict
