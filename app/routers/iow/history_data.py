@@ -140,10 +140,10 @@ async def download_single_station_raw_data(
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
     # API
-    s_response = get_Station_metadata(item.st_uuid, headers)
+    s_response = get_Station_metadata(item.st_uuid, headers, PAYLOAD["client_id"], PAYLOAD["client_secret"])
     st_name = s_response['Name']
 
-    df = get_PhysicalQuantity_history_data(headers, item, st_name)
+    df = get_PhysicalQuantity_history_data(headers, PAYLOAD["client_id"], PAYLOAD["client_secret"], item, st_name)
     f_name = f'{st_name}_{item.pq_uuid}.csv'
     f_path = write_file(df, f_name)
     return FileResponse(f_path, media_type='application/octet-stream', filename=f_name)
@@ -185,7 +185,7 @@ async def download_multiple_stations_raw_data(
         pq_uuid = line[1]
 
         # API
-        s_response = get_Station_metadata(st_uuid, headers)
+        s_response = get_Station_metadata(st_uuid, headers, PAYLOAD["client_id"], PAYLOAD["client_secret"])
         st_name = s_response['Name']
 
         item = Item(
@@ -194,7 +194,7 @@ async def download_multiple_stations_raw_data(
             st_uuid=st_uuid,
             pq_uuid=pq_uuid
         )
-        df = get_PhysicalQuantity_history_data(headers, item, st_name)
+        df = get_PhysicalQuantity_history_data(headers, PAYLOAD["client_id"], PAYLOAD["client_secret"], item, st_name)
         f_name = f'{st_name}_{pq_uuid}.csv'
         f_path = write_file(df, f_name)
         file_names.append(f_path)
