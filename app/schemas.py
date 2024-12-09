@@ -1,7 +1,8 @@
 from pydantic import BaseModel, Field, validator
 from fastapi import HTTPException
-from typing import Optional
+from typing import Optional, List
 from dateutil.parser import parse, ParserError
+from enum import Enum
 
 
 def parse_and_format_date(field_value: str) -> str:
@@ -38,3 +39,17 @@ class Metadata(BaseModel):
     @validator('datetime_start', 'datetime_end')
     def validate_datetime(cls, value):
         return parse_and_format_date(value)
+
+class Role(str, Enum):
+    admin = "admin"
+    staff = "staff"
+    guest = "guest"
+
+class User(BaseModel):
+    username: str
+    password: str
+    full_name: str
+    email: str
+    gender: Optional[str] = None
+    is_active: bool
+    roles: List[Role]

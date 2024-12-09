@@ -4,6 +4,7 @@ from app.dependencies import get_query_token, get_token_header
 from app.internal import admin
 from app.routers.iow import history_data, latest_data, latest_data_from_db, statistics_data
 
+from app.routers.account import account
 
 app = FastAPI()
 # app = FastAPI(dependencies=[Depends(get_query_token)])
@@ -35,6 +36,11 @@ app.include_router(
     dependencies=[Depends(get_query_token)],
 )
 
+app.include_router(
+    account.router,
+    prefix="/account",
+    tags=["帳戶管理"]
+)
 
 # app.include_router(
 #     admin.router,
