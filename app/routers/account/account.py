@@ -82,14 +82,6 @@ def get_current_active_user(
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-
-@router.post("/api/v1/create-user", response_model=User)
-def insert_user(user: User):
-    user.hashed_password = get_password_hash(user.hashed_password)
-    USER_db['account'].insert_one(user.dict())
-    return user
-
-
 # Routes for OAuth2 and scopes
 @router.post("/api/token")
 def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
@@ -103,7 +95,7 @@ def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depen
     )
     return Token(access_token=access_token, token_type="bearer")
 
-@router.get("/api/v1/read-all-users", response_model=List[User])  # User
+@router.get("/api/v1/read-all-users", response_model=List[User])
 async def read_users(current_user: Annotated[User, Depends(get_current_active_user)]):
     # User must have ["staff"] in scopes & is_active=True to access function
     users = list(USER_db['account'].find())
@@ -118,3 +110,9 @@ async def view_map(current_user: Annotated[User, Security(get_current_active_use
 async def read_system_status(current_user: Annotated[User, Depends(get_current_user)]):
     # User is active or inactive can access function
     return {"status": "ok"}
+
+@router.post("/api/v1/create-user", response_model=User)
+def insert_user(current_user: Annotated[User, Security(get_current_active_user, scopes=["admin"])], user: User):
+    user.hashed_password = get_password_hash(user.hashed_password)
+    USER_db['account'].insert_one(user.dict())
+    return user
