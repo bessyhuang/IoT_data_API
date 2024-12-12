@@ -32,7 +32,8 @@ app.include_router(
 app.include_router(
     statistics_data.router,
     prefix="/iow/statistics",
-    tags=["統計資料"]
+    tags=["統計資料"],
+    dependencies=[Depends(account.get_current_active_user)],
 )
 
 app.include_router(
