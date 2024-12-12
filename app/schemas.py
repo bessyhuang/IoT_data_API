@@ -7,14 +7,18 @@ from enum import Enum
 
 def parse_and_format_date(field_value: str) -> str:
     """Helper function to parse and format date."""
-    try:
-        parsed_date = parse(field_value)
-        return parsed_date.strftime("%Y-%m-%d")
-    except ParserError as e:
-        raise HTTPException(
-            status_code=400,
-            detail="【Invalid date format】 Expected format: YYYY-MM-DD"
-        ) from e
+    if 'T' in field_value:
+        return field_value
+    else:
+        try:
+            parsed_date = parse(field_value)
+            return parsed_date.strftime("%Y-%m-%d")
+        except ParserError as e:
+            print(e)
+            raise HTTPException(
+                status_code=400,
+                detail="【Invalid date format】 Expected format: YYYY-MM-DD"
+            ) from e
 
 
 class Item(BaseModel):
