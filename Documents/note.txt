@@ -8,3 +8,14 @@ docker run -d --name fastapi_service --memory 9g --memory-swap 10g -p 8000:8000 
 ---
 Windows CMD:
 (myenv) fastapi dev app/main.py
+
+---
+Testing: use `uv` (10-100 times faster) instead of `pip`
+- URL: https://www.packetcoders.io/faster-pip-installs-with-uv/
+
+$ curl -LsSf https://astral.sh/uv/install.sh | sh
+$ uv venv [my_env]
+$ source [myenv]/bin/activate
+(myenv) $ uv pip install -r requirements.txt
+(myenv) $ uv pip freeze > requirements.txt
+(myenv) $ uvicorn app.main:app --reload --host 0.0.0.0 --port 5002
