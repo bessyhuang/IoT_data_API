@@ -32,8 +32,7 @@ app.include_router(
 app.include_router(
     statistics_data.router,
     prefix="/iow/statistics",
-    tags=["統計資料"],
-    dependencies=[Depends(get_query_token)],
+    tags=["統計資料"]
 )
 
 app.include_router(

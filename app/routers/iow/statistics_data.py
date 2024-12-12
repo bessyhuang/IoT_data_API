@@ -4,15 +4,17 @@ import os
 import pytz
 import requests
 import pandas as pd
+from typing import Annotated
 from datetime import datetime, timedelta, time
 from decouple import Config, RepositoryEnv
 
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, File, UploadFile, Security
 from fastapi.responses import FileResponse
 
-from app.schemas import Item, Metadata
+from app.schemas import Item, Metadata, User
 from app.routers.iow.latest_data import get_Station_metadata, write_file, get_PhysicalQuantity_latest_data
 from app.routers.iow.history_data import get_PhysicalQuantity_history_data, get_PhysicalQuantity_history_data_within12hr, compress
+from app.routers.account.account import get_current_active_user
 
 
 router = APIRouter()
@@ -367,10 +369,11 @@ def calculate_opsUnits_pumpingVol(concat_df):
 
 @router.post("/report/pump_runtime", response_class=FileResponse)
 async def 抽水區間報表(
+    current_user: Annotated[User, Security(get_current_active_user)],
     datetime_start: str,
     datetime_end: str,
     pump_interval_N_min: int = 10,
-    st_pq_file: UploadFile = File(...),
+    st_pq_file: UploadFile = File(...)
 ):
     # Get IoW token
     response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
@@ -431,10 +434,11 @@ async def 抽水區間報表(
 
 @router.post("/report/avail_rate", response_class=FileResponse)
 async def 日和月平均妥善率報表(
+    current_user: Annotated[User, Security(get_current_active_user)],
     datetime_start: str,
     datetime_end: str,
     N_records_per_day: int = 24,
-    st_pq_file: UploadFile = File(...),
+    st_pq_file: UploadFile = File(...)
 ):
     # Write txt file to temp folder
     try:
@@ -493,10 +497,11 @@ async def 日和月平均妥善率報表(
 
 @router.post("/report/max_flood_height", response_class=FileResponse)
 async def 最大淹水高度區間報表(
+    current_user: Annotated[User, Security(get_current_active_user)],
     datetime_start: str,
     datetime_end: str,
     flood_height_interval_N_min: int = 8,
-    st_pq_file: UploadFile = File(...),
+    st_pq_file: UploadFile = File(...)
 ):
     # Get IoW token
     response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
@@ -557,10 +562,11 @@ async def 最大淹水高度區間報表(
 
 @router.post("/report/operating_units_and_pumping_volumes", response_class=FileResponse)
 async def 運轉台數與抽水量的即時報表(
+    current_user: Annotated[User, Security(get_current_active_user)],
     datetime_start: str,
     datetime_end: str,
     pump_interval_N_min: int = 10,
-    st_pq_file: UploadFile = File(...),
+    st_pq_file: UploadFile = File(...)
 ):
     # Get IoW token
     response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
@@ -634,7 +640,9 @@ async def 運轉台數與抽水量的即時報表(
 
 
 @router.post("/report/available_pumps", response_class=FileResponse)
-async def 可調度抽水機的即時報表():
+async def 可調度抽水機的即時報表(
+    current_user: Annotated[User, Security(get_current_active_user)]
+):
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Get aiot token
@@ -684,7 +692,9 @@ async def 可調度抽水機的即時報表():
 
 
 @router.post("/report/available_pumps_within12hr", response_class=FileResponse)
-async def 十二小時內無抽水紀錄_可調度抽水機的即時報表():
+async def 十二小時內無抽水紀錄_可調度抽水機的即時報表(
+    current_user: Annotated[User, Security(get_current_active_user)]
+):
     now = datetime.now()
     start_time = pytz.timezone('Asia/Taipei').localize(
         datetime.combine(now - timedelta(days=1), time(now.hour, 0, 0))
