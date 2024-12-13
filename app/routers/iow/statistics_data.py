@@ -63,6 +63,7 @@ def get_country_town_village():
         st_location_dict[st["_id"]] = st["county"] + st["town"] + st["village"]
     return st_location_dict
 
+
 def get_date_list(start_time, end_time):
     date_list = []
 
@@ -90,6 +91,7 @@ def get_date_list(start_time, end_time):
     )
     date_list.append((start_of_last_day, end_time))
     return date_list
+
 
 def transform_avail_pump(pump, df, data_time):
     if "Value" not in df:

@@ -1,13 +1,12 @@
 from fastapi import FastAPI, Depends
 
-from app.dependencies import get_query_token, get_token_header
 from app.internal import admin
+from app.auth.rbac import get_current_active_user
 from app.routers.iow import history_data, latest_data, latest_data_from_db, statistics_data
-
 from app.routers.account import account
 
+
 app = FastAPI()
-# app = FastAPI(dependencies=[Depends(get_query_token)])
 
 
 app.include_router(
@@ -26,14 +25,14 @@ app.include_router(
     history_data.router,
     prefix="/iow/history",
     tags=["歷史資料"],
-    dependencies=[Depends(get_query_token)],
+    dependencies=[Depends(get_current_active_user)],
 )
 
 app.include_router(
     statistics_data.router,
     prefix="/iow/statistics",
     tags=["統計資料"],
-    dependencies=[Depends(account.get_current_active_user)],
+    dependencies=[Depends(get_current_active_user)],
 )
 
 app.include_router(
@@ -51,5 +50,5 @@ app.include_router(
 
 
 @app.get("/")
-async def root():
+def root():
     return {"message": "Welcome to get data by yourself!"}
