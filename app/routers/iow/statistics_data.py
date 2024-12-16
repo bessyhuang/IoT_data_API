@@ -27,7 +27,7 @@ PAYLOAD = {
 }
 
 # Get IoW token
-response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
 token = response["access_token"]
 headers = {"Accept": "application/json", "Authorization": "Bearer %s" % token}
 
@@ -39,19 +39,19 @@ def get_country_town_village():
         "username": ENV.get('AIOT_username'),
         "password": ENV.get('AIOT_password')
     }
-    AIOT_token = requests.post(AIOT_token_url, json=body).json()["token"]
+    AIOT_token = requests.post(AIOT_token_url, json=body, timeout=5).json()["token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {AIOT_token}"}
 
     RFD_url = "https://api.floodsolution.aiot.ing/api/v1/devices/RFD"
-    RFD_aiot_data = requests.get(RFD_url, headers=headers).json()
+    RFD_aiot_data = requests.get(RFD_url, headers=headers, timeout=5).json()
     RFD_aiot_data = RFD_aiot_data["data"]
 
     MPD_url = "https://api.floodsolution.aiot.ing/api/v1/devices/MPD"
-    MPD_aiot_data = requests.get(MPD_url, headers=headers).json()
+    MPD_aiot_data = requests.get(MPD_url, headers=headers, timeout=5).json()
     MPD_aiot_data = MPD_aiot_data["data"]
 
     MPDCY_url = "https://api.floodsolution.aiot.ing/api/v1/devices/MPDCY"
-    MPDCY_aiot_data = requests.get(MPDCY_url, headers=headers).json()
+    MPDCY_aiot_data = requests.get(MPDCY_url, headers=headers, timeout=5).json()
     MPDCY_aiot_data = MPDCY_aiot_data["data"]
 
     st_location_dict = dict()
@@ -375,7 +375,7 @@ async def 抽水區間報表(
     st_pq_file: UploadFile = File(...)
 ):
     # Get IoW token
-    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
     token = response["access_token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
@@ -486,7 +486,6 @@ async def 日和月平均妥善率報表(
 
     if len(file_names) > 0:
         zip_filepath, f_name = compress(file_names)
-        os.system(f'rm {temp_folder_path}無歷史資料的監測站_AvailRate_report.txt')
         return FileResponse(zip_filepath, media_type="application/octet-stream", filename=f_name)
     else:
         result = {"msg": "NO DATA TO DOWNLOAD"}
@@ -501,7 +500,7 @@ async def 最大淹水高度區間報表(
     st_pq_file: UploadFile = File(...)
 ):
     # Get IoW token
-    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
     token = response["access_token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
@@ -565,7 +564,7 @@ async def 運轉台數與抽水量的即時報表(
     st_pq_file: UploadFile = File(...)
 ):
     # Get IoW token
-    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
     token = response["access_token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
@@ -628,7 +627,6 @@ async def 運轉台數與抽水量的即時報表(
 
     if len(file_names) > 0:
         zip_filepath, f_name = compress(file_names)
-        os.system(f'rm {temp_folder_path}無歷史資料的監測站_OperatingUnits_and_PumpingVolumes_report.txt')
         return FileResponse(zip_filepath, media_type="application/octet-stream", filename=f_name)
     else:
         result = {"msg": "NO DATA TO DOWNLOAD"}
@@ -645,15 +643,15 @@ async def 可調度抽水機的即時報表():
         "username": ENV.get('AIOT_username'),
         "password": ENV.get('AIOT_password')
     }
-    AIOT_token = requests.post(AIOT_token_url, json=body).json()["token"]
+    AIOT_token = requests.post(AIOT_token_url, json=body, timeout=5).json()["token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {AIOT_token}"}
 
     MPD_url = "https://api.floodsolution.aiot.ing/api/v1/devices/MPD"
-    MPD_aiot_data = requests.get(MPD_url, headers=headers).json()
+    MPD_aiot_data = requests.get(MPD_url, headers=headers, timeout=5).json()
     MPD_aiot_data = MPD_aiot_data["data"]
 
     MPDCY_url = "https://api.floodsolution.aiot.ing/api/v1/devices/MPDCY"
-    MPDCY_aiot_data = requests.get(MPDCY_url, headers=headers).json()
+    MPDCY_aiot_data = requests.get(MPDCY_url, headers=headers, timeout=5).json()
     MPDCY_aiot_data = MPDCY_aiot_data["data"]
 
     st_dict = {}
@@ -698,7 +696,7 @@ async def 十二小時內無抽水紀錄_可調度抽水機的即時報表():
     df = pd.read_csv(st_uuids_path, encoding='utf-8')
 
     # Get IoW token
-    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
     token = response["access_token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 

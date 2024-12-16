@@ -21,7 +21,7 @@ def get_Station_metadata(
 
     for attempt in range(max_retries):
         try:
-            s_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{s_API}', headers=headers)
+            s_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{s_API}', headers=headers, timeout=5)
             s_response.raise_for_status()
             s_response = s_response.json()
 
@@ -38,7 +38,7 @@ def get_Station_metadata(
                 time.sleep(delay)
                 # Get IoW token
                 PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
-                response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+                response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
                 token = response["access_token"]
                 headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
                 continue
@@ -51,7 +51,7 @@ def get_PhysicalQuantity_UUIDs(
 
     for attempt in range(max_retries):
         try:
-            pq_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_API}', headers=headers)
+            pq_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_API}', headers=headers, timeout=5)
             pq_response.raise_for_status()
             pq_response = pq_response.json()
 
@@ -68,7 +68,7 @@ def get_PhysicalQuantity_UUIDs(
                 time.sleep(delay)
                 # Get IoW token
                 PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
-                response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+                response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
                 token = response["access_token"]
                 headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
             else:
@@ -82,7 +82,7 @@ def get_PhysicalQuantity_latest_data(
 
     for attempt in range(max_retries):
         try:
-            pq_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_API}', headers=headers)
+            pq_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_API}', headers=headers, timeout=5)
             pq_response.raise_for_status()
             pq_response = pq_response.json()
 
@@ -100,7 +100,7 @@ def get_PhysicalQuantity_latest_data(
                 time.sleep(delay)
                 # Get IoW token
                 PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
-                response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+                response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
                 token = response["access_token"]
                 headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
             else:
@@ -114,7 +114,7 @@ def get_PhysicalQuantity_metadata(
 
     for attempt in range(max_retries):
         try:
-            pq_metadata_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_metadata_API}', headers=headers)
+            pq_metadata_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_metadata_API}', headers=headers, timeout=5)
             pq_metadata_response.raise_for_status()
             pq_metadata_response = pq_metadata_response.json()
 
@@ -131,7 +131,7 @@ def get_PhysicalQuantity_metadata(
                 time.sleep(delay)
                 # Get IoW token
                 PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
-                response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+                response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
                 token = response["access_token"]
                 headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
             else:
@@ -158,7 +158,7 @@ async def lookup_physical_quantity_list(
 ):
     # Get IoW token
     PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
-    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
     token = response["access_token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
@@ -174,7 +174,7 @@ async def lookup_station_metadata(
 ):
     # Get IoW token
     PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
-    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
     token = response["access_token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
@@ -193,7 +193,7 @@ async def lookup_station_metadata(
 async def download_station_and_physical_quantity_relation(client_id: str, client_secret: str, st_file: UploadFile = File(...)):
     # Get IoW token
     PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
-    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
     token = response["access_token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
@@ -230,7 +230,7 @@ async def 監測站與物理量UUID對應表(
 ):
     # Get IoW token
     PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
-    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
     token = response["access_token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
@@ -300,7 +300,7 @@ async def 滯洪池即時水位(
 ):
     # Get IoW token
     PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
-    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD).json()
+    response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
     token = response["access_token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
