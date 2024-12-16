@@ -1,14 +1,15 @@
 # 
-FROM python:3.9
+FROM python:3.12-slim
 
 # 
 WORKDIR /code
 
 # 
-COPY ./requirements.txt /code/requirements.txt
+COPY ./requirements_uv.txt /code/requirements_uv.txt
 
 # 
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+RUN pip install uv
+RUN uv pip install --system --no-cache-dir -r /code/requirements_uv.txt
 
 # 
 COPY ./app /code/app
