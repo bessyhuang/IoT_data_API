@@ -1,6 +1,5 @@
 from fastapi import FastAPI, Depends
 
-from app.internal import admin
 from app.auth.rbac import get_current_active_user
 from app.routers.iow import history_data, latest_data, latest_data_from_db, statistics_data
 from app.routers.account import account
@@ -40,13 +39,6 @@ app.include_router(
     prefix="/account",
     tags=["帳戶管理"]
 )
-
-# app.include_router(
-#     admin.router,
-#     prefix="/admin",
-#     tags=["admin"],
-#     dependencies=[Depends(get_token_header)],
-# )
 
 
 @app.get("/")

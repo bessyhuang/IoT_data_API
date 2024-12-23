@@ -5,25 +5,27 @@ import pytz
 import requests
 import pandas as pd
 from datetime import datetime, timedelta, time
-from decouple import Config, RepositoryEnv
 
 from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import FileResponse
 
-from app.schemas import Item, Metadata
+from app.models.iow_schemas import Item, Metadata
 from app.routers.iow.latest_data import get_Station_metadata, write_file, get_PhysicalQuantity_latest_data
 from app.routers.iow.history_data import get_PhysicalQuantity_history_data, get_PhysicalQuantity_history_data_within12hr, compress
+from app.config import settings
 
 
 router = APIRouter()
-base_dir = os.getcwd()
 
-# Settings
-ENV = Config(RepositoryEnv(base_dir + "/.env"))
+# Load environment variables
 PAYLOAD = {
-    "grant_type": ENV.get("API_GRANT_TYPE"),
-    "client_id": ENV.get("API_CLIENT_ID"),
-    "client_secret": ENV.get("API_CLIENT_SECRET"),
+    "grant_type": settings.API_GRANT_TYPE,
+    "client_id": settings.API_CLIENT_ID,
+    "client_secret": settings.API_CLIENT_SECRET,
+}
+BODY = {
+    "username": settings.AIOT_username,
+    "password": settings.AIOT_password
 }
 
 # Get IoW token
@@ -35,11 +37,7 @@ headers = {"Accept": "application/json", "Authorization": "Bearer %s" % token}
 def get_country_town_village():
     # Get aiot token
     AIOT_token_url = "https://api.floodsolution.aiot.ing/auth/v1/login"
-    body = {
-        "username": ENV.get('AIOT_username'),
-        "password": ENV.get('AIOT_password')
-    }
-    AIOT_token = requests.post(AIOT_token_url, json=body, timeout=5).json()["token"]
+    AIOT_token = requests.post(AIOT_token_url, json=BODY, timeout=5).json()["token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {AIOT_token}"}
 
     RFD_url = "https://api.floodsolution.aiot.ing/api/v1/devices/RFD"
@@ -381,7 +379,7 @@ async def 抽水區間報表(
 
     # Write txt file to temp folder
     try:
-        temp_folder_path = base_dir + "/temp/"
+        temp_folder_path = os.getcwd() + "/temp/"
         if not os.path.exists(temp_folder_path):
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_pq_file.filename, "wb") as f:
@@ -440,7 +438,7 @@ async def 日和月平均妥善率報表(
 ):
     # Write txt file to temp folder
     try:
-        temp_folder_path = base_dir + "/temp/"
+        temp_folder_path = os.getcwd() + "/temp/"
         if not os.path.exists(temp_folder_path):
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_pq_file.filename, "wb") as f:
@@ -506,7 +504,7 @@ async def 最大淹水高度區間報表(
 
     # Write txt file to temp folder
     try:
-        temp_folder_path = base_dir + "/temp/"
+        temp_folder_path = os.getcwd() + "/temp/"
         if not os.path.exists(temp_folder_path):
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_pq_file.filename, "wb") as f:
@@ -570,7 +568,7 @@ async def 運轉台數與抽水量的即時報表(
 
     # Write txt file to temp folder
     try:
-        temp_folder_path = base_dir + "/temp/"
+        temp_folder_path = os.getcwd() + "/temp/"
         if not os.path.exists(temp_folder_path):
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_pq_file.filename, "wb") as f:
@@ -639,11 +637,7 @@ async def 可調度抽水機的即時報表():
 
     # Get aiot token
     AIOT_token_url = "https://api.floodsolution.aiot.ing/auth/v1/login"
-    body = {
-        "username": ENV.get('AIOT_username'),
-        "password": ENV.get('AIOT_password')
-    }
-    AIOT_token = requests.post(AIOT_token_url, json=body, timeout=5).json()["token"]
+    AIOT_token = requests.post(AIOT_token_url, json=BODY, timeout=5).json()["token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {AIOT_token}"}
 
     MPD_url = "https://api.floodsolution.aiot.ing/api/v1/devices/MPD"
@@ -692,7 +686,7 @@ async def 十二小時內無抽水紀錄_可調度抽水機的即時報表():
     end_time = datetime.now().strftime("%Y-%m-%dT%H.00.00")
 
     # STATION_UUIDs (get from local)
-    st_uuids_path = base_dir + "/STATION_UUIDs/MPD_MPDCY_all_info.csv"  #
+    st_uuids_path = os.getcwd() + "/STATION_UUIDs/MPD_MPDCY_all_info.csv"  #
     df = pd.read_csv(st_uuids_path, encoding='utf-8')
 
     # Get IoW token

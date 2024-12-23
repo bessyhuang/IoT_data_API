@@ -2,18 +2,13 @@
 from fastapi import HTTPException, Depends, Security
 from fastapi.security import SecurityScopes, OAuth2PasswordBearer
 
-from decouple import Config, RepositoryEnv
 from typing import Annotated
 from passlib.context import CryptContext
-from pymongo import MongoClient
-import os
 
 from app.auth.jwt import decode_access_token
-from app.schemas import User, UserInDB
+from app.models.account_schemas import User, UserInDB
+from app.config import get_mongodb_connection
 
-
-base_dir = os.getcwd()
-ENV = Config(RepositoryEnv(base_dir + '/.env'))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(
@@ -29,7 +24,7 @@ oauth2_scheme = OAuth2PasswordBearer(
 )
 
 # Get User metadata from DB
-USER_dbClient = MongoClient(ENV.get('HISTORY_DB_HOST_PORT'), username=ENV.get('HISTORY_DB_USER'), password=ENV.get('HISTORY_DB_PASSWORD'), authSource=ENV.get('HISTORY_DB_AUTH_SOURCE'))
+USER_dbClient = get_mongodb_connection('history')
 USER_db = USER_dbClient.users
 
 

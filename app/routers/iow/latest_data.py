@@ -11,7 +11,6 @@ from fastapi import APIRouter, File, UploadFile, Query
 from fastapi.responses import FileResponse
 
 router = APIRouter()
-base_dir = os.getcwd()
 
 
 def get_Station_metadata(
@@ -140,7 +139,7 @@ def get_PhysicalQuantity_metadata(
 
 def write_file(data, filename):
     file_type = filename.split(".")[-1]
-    temp_folder_path = base_dir + "/temp/"
+    temp_folder_path = os.getcwd() + "/temp/"
     if not os.path.exists(temp_folder_path):
         os.makedirs(temp_folder_path)
     output_file = os.path.join(temp_folder_path, filename)
@@ -163,8 +162,8 @@ async def lookup_physical_quantity_list(
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
     # API
-    s_response = await get_Station_metadata(st_uuid, headers, client_id, client_secret)
-    pq_uuid_list = await get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
+    s_response = get_Station_metadata(st_uuid, headers, client_id, client_secret)
+    pq_uuid_list = get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
     return {"st_metadata": s_response, "pq_list": pq_uuid_list}
 
 
@@ -179,12 +178,12 @@ async def lookup_station_metadata(
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
     # API
-    s_response = await get_Station_metadata(st_uuid, headers, client_id, client_secret)
-    pq_uuid_list = await get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
+    s_response = get_Station_metadata(st_uuid, headers, client_id, client_secret)
+    pq_uuid_list = get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
     pq_metadata = []
     if pq_uuid_list:
         for pq_uuid in pq_uuid_list:
-            data = await get_PhysicalQuantity_metadata(pq_uuid, headers, client_id, client_secret)
+            data = get_PhysicalQuantity_metadata(pq_uuid, headers, client_id, client_secret)
             pq_metadata.append(data)
     return {"st_metadata": s_response, "pq_list": pq_uuid_list, "pq_metadata": pq_metadata}
 
@@ -199,7 +198,7 @@ async def download_station_and_physical_quantity_relation(client_id: str, client
 
     # Write txt file to temp folder
     try:
-        temp_folder_path = base_dir + "/temp/"
+        temp_folder_path = os.getcwd() + "/temp/"
         if not os.path.exists(temp_folder_path):
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_file.filename, 'wb') as f:
@@ -214,7 +213,7 @@ async def download_station_and_physical_quantity_relation(client_id: str, client
     data = {}
     for st_uuid in content:
         st_uuid = st_uuid.replace("\n", "")
-        pq_list = await get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
+        pq_list = get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
         data[st_uuid] = pq_list
 
     # Write json file
@@ -234,7 +233,7 @@ async def 監測站與物理量UUID對應表(
     token = response["access_token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
-    st_uuids_path = base_dir + "/STATION_UUIDs/" + f'{device_type}_station_ID.txt'
+    st_uuids_path = os.getcwd() + "/STATION_UUIDs/" + f'{device_type}_station_ID.txt'
     with open(st_uuids_path, "r", encoding='utf-8') as f:
         st_uuids_list = f.readlines()
         st_uuids_list = [row.replace('\n', '') for row in st_uuids_list]
@@ -243,14 +242,14 @@ async def 監測站與物理量UUID對應表(
     data = defaultdict(dict)
     merge_list = []
     for st_uuid in st_uuids_list:
-        s_response = await get_Station_metadata(st_uuid, headers, client_id, client_secret)
-        pq_uuid_list = await get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
+        s_response = get_Station_metadata(st_uuid, headers, client_id, client_secret)
+        pq_uuid_list = get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
         data[st_uuid]["st_uuid"] = st_uuid
         data[st_uuid]["st_name"] = s_response["Name"]
 
         if pq_uuid_list:
             for pq_uuid in pq_uuid_list:
-                pq_metadata_response = await get_PhysicalQuantity_metadata(pq_uuid, headers, client_id, client_secret)
+                pq_metadata_response = get_PhysicalQuantity_metadata(pq_uuid, headers, client_id, client_secret)
                 PQ_desc = pq_metadata_response["Description"]
                 PQ_name = pq_metadata_response["Name"]
 
@@ -304,7 +303,7 @@ async def 滯洪池即時水位(
     token = response["access_token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
-    st_uuids_path = base_dir + "/STATION_UUIDs/滯洪池_stUUID_pqUUID_滯洪池底.txt"
+    st_uuids_path = os.getcwd() + "/STATION_UUIDs/滯洪池_stUUID_pqUUID_滯洪池底.txt"
     with open(st_uuids_path, "r", encoding='utf-8') as f:
         st_uuids_list = f.readlines()
 

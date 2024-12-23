@@ -1,9 +1,7 @@
 """History Data API"""
 
-from decouple import Config, RepositoryEnv
 from typing import Annotated
 from datetime import datetime, timedelta
-from pymongo import MongoClient
 import pandas as pd
 import requests
 import zipfile
@@ -15,23 +13,22 @@ import os
 from fastapi import APIRouter, Body, File, UploadFile
 from fastapi.responses import FileResponse
 
-from app.schemas import Item
+from app.models.iow_schemas import Item
 from app.routers.iow.latest_data import get_Station_metadata, write_file
+from app.config import settings, get_mongodb_connection
 
 
 router = APIRouter()
 
 # Load environment variables
-base_dir = os.getcwd()
-ENV = Config(RepositoryEnv(base_dir + '/.env'))
 PAYLOAD = {
-    "grant_type": ENV.get("API_GRANT_TYPE"),
-    "client_id": ENV.get("API_CLIENT_ID"),
-    "client_secret": ENV.get("API_CLIENT_SECRET"),
+    "grant_type": settings.API_GRANT_TYPE,
+    "client_id": settings.API_CLIENT_ID,
+    "client_secret": settings.API_CLIENT_SECRET,
 }
 
 # Get IoW metadata from DB
-HISTORY_dbClient = MongoClient(ENV.get('HISTORY_DB_HOST_PORT'), username=ENV.get('HISTORY_DB_USER'), password=ENV.get('HISTORY_DB_PASSWORD'), authSource=ENV.get('HISTORY_DB_AUTH_SOURCE'))
+HISTORY_dbClient = get_mongodb_connection('history')
 HISTORY_db = HISTORY_dbClient.iow
 
 
@@ -107,7 +104,7 @@ def get_PhysicalQuantity_history_data(
 
 def compress(file_names):
     # create the zip file first parameter path/name, second mode
-    temp_folder_path = base_dir + "/temp/"
+    temp_folder_path = os.getcwd() + "/temp/"
     random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
     f_name = f'DATA_{random_string}.zip'
     zip_filepath = os.path.join(temp_folder_path, f_name)
@@ -151,21 +148,18 @@ async def download_single_station_raw_data(
 
 @router.post("/download/multiple_stations/raw_data", response_class=FileResponse)
 async def download_multiple_stations_raw_data(
-    client_id: str,
-    client_secret: str,
     datetime_start: str,
     datetime_end: str,
     st_pq_file: UploadFile = File(...)
 ):
     # Get IoW token
-    PAYLOAD = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
     response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
     token = response["access_token"]
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
     # Write txt file to temp folder
     try:
-        temp_folder_path = base_dir + "/temp/"
+        temp_folder_path = os.getcwd() + "/temp/"
         if not os.path.exists(temp_folder_path):
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_pq_file.filename, 'wb') as f:

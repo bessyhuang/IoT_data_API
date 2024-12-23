@@ -2,24 +2,19 @@
 
 import os
 import json
-from decouple import Config, RepositoryEnv
-from pymongo import MongoClient
 from bson import json_util
 
 from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import FileResponse
 
 from app.routers.iow.latest_data import write_file
+from app.config import get_mongodb_connection
 
 
 router = APIRouter()
 
-# Load environment variables
-base_dir = os.getcwd()
-ENV = Config(RepositoryEnv(base_dir + '/.env'))
-
 # Get IoW metadata from DB
-dbClient = MongoClient(ENV.get('DB_HOST_PORT'), username=ENV.get('DB_USER'), password=ENV.get('DB_PASSWORD'), authSource=ENV.get('DB_AUTH_SOURCE'))
+dbClient = get_mongodb_connection('metadata')
 db = dbClient.iow
 
 
@@ -50,7 +45,7 @@ async def lookup_physical_quantity_metadata(pq_uuid: str):
 async def download_station_and_physical_quantity_relation(st_file: UploadFile = File(...)):
     # Write txt file to temp folder
     try:
-        temp_folder_path = base_dir + "/temp/"
+        temp_folder_path = os.getcwd() + "/temp/"
         if not os.path.exists(temp_folder_path):
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_file.filename, 'wb') as f:

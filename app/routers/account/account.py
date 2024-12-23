@@ -1,28 +1,21 @@
 """User API"""
 
-from decouple import Config, RepositoryEnv
 from datetime import timedelta
 from typing import Annotated, List
-from pymongo import MongoClient
-import os
 
 from fastapi import APIRouter, Depends, HTTPException, Security
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.schemas import User, Token
+from app.models.account_schemas import User, Token
 from app.auth.jwt import create_access_token
 from app.auth.rbac import authenticate_user, get_current_active_user, get_current_user, get_password_hash
+from app.config import settings, get_mongodb_connection
 
 
 router = APIRouter()
 
-# Load environment variables
-base_dir = os.getcwd()
-ENV = Config(RepositoryEnv(base_dir + '/.env'))
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
 # Get User metadata from DB
-USER_dbClient = MongoClient(ENV.get('HISTORY_DB_HOST_PORT'), username=ENV.get('HISTORY_DB_USER'), password=ENV.get('HISTORY_DB_PASSWORD'), authSource=ENV.get('HISTORY_DB_AUTH_SOURCE'))
+USER_dbClient = get_mongodb_connection('history')
 USER_db = USER_dbClient.users
 
 
@@ -37,7 +30,7 @@ def login_for_access_token(
 
     access_token = create_access_token(
         data={"sub": user.username, "scopes": form_data.scopes},
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     return Token(access_token=access_token, token_type="bearer")
 
