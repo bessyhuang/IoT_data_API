@@ -484,7 +484,6 @@ async def 日和月平均妥善率報表(
             if result_df.shape[0] > 0:
                 file_names.append(f_path)
         except Exception as e:
-            print(str(e))
             with open(temp_folder_path + "無歷史資料的監測站_AvailRate_report.txt", "a", encoding="utf-8") as f:
                 f.write(f'{st_name}\t{st_uuid}\n')
 
@@ -616,7 +615,6 @@ async def 運轉台數與抽水量的即時報表(
             if result_df.shape[0] > 0:
                 file_names.append(f_path)
         except Exception as e:
-            print(str(e))
             with open(temp_folder_path + "無歷史資料的監測站_OperatingUnits_and_PumpingVolumes_report.txt", "a", encoding="utf-8") as f_out:
                 f_out.write(f'{st_name}\t{st_uuid}\n')
 
