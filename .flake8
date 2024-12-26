@@ -1,0 +1,7 @@
+[flake8]
+max-line-length = 135
+ignore =
+    # Function is too complex
+    C901,
+    # Comparison to true should be 'if cond is true:' or 'if cond:'
+    E712,

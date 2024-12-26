@@ -211,7 +211,7 @@ async def download_station_and_physical_quantity_relation(client_id: str, client
         with open(temp_folder_path + st_file.filename, 'wb') as f:
             f.write(st_file.file.read())
     except Exception as e:
-        return {"message": "There was an error uploading the file"}
+        return {"message": f"There was an error uploading the file. {str(e)}"}
 
     # Read txt file (One line, one station)
     with open(temp_folder_path + st_file.filename, 'r', encoding='utf-8') as f:
@@ -231,7 +231,7 @@ async def download_station_and_physical_quantity_relation(client_id: str, client
 
 @router.post("/get_latest_table")
 async def 監測站與物理量UUID對應表(
-    client_id: str, client_secret: str, 
+    client_id: str, client_secret: str,
     device_type: str = Query('RFD', enum=['RFD', 'MPD', 'MPDCY'])
 ):
     # Get IoW token
