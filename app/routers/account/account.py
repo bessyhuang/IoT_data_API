@@ -22,7 +22,12 @@ ENV = Config(RepositoryEnv(base_dir + '/.env'))
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Get User metadata from DB
-USER_dbClient = MongoClient(ENV.get('HISTORY_DB_HOST_PORT'), username=ENV.get('HISTORY_DB_USER'), password=ENV.get('HISTORY_DB_PASSWORD'), authSource=ENV.get('HISTORY_DB_AUTH_SOURCE'))
+USER_dbClient = MongoClient(
+    ENV.get('HISTORY_DB_HOST_PORT'),
+    username=ENV.get('HISTORY_DB_USER'),
+    password=ENV.get('HISTORY_DB_PASSWORD'),
+    authSource=ENV.get('HISTORY_DB_AUTH_SOURCE')
+)
 USER_db = USER_dbClient.users
 
 

@@ -117,7 +117,9 @@ def get_PhysicalQuantity_metadata(
 
     for attempt in range(max_retries):
         try:
-            pq_metadata_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_metadata_API}', headers=headers, timeout=5)
+            pq_metadata_response = requests.get(
+                f'https://iapi.wra.gov.tw/v3/api/{pq_metadata_API}', headers=headers, timeout=5
+            )
             pq_metadata_response.raise_for_status()
             pq_metadata_response = pq_metadata_response.json()
 
@@ -208,7 +210,7 @@ async def download_station_and_physical_quantity_relation(client_id: str, client
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_file.filename, 'wb') as f:
             f.write(st_file.file.read())
-    except:
+    except Exception as e:
         return {"message": "There was an error uploading the file"}
 
     # Read txt file (One line, one station)

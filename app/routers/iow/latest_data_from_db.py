@@ -61,7 +61,7 @@ async def download_station_and_physical_quantity_relation(st_file: UploadFile = 
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_file.filename, 'wb') as f:
             f.write(st_file.file.read())
-    except:
+    except Exception as e:
         return {"message": "There was an error uploading the file"}
 
     # Read txt file (One line, one station)

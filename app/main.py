@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends
 
-from app.internal import admin
+# from app.internal import admin
 from app.auth.rbac import get_current_active_user
 from app.routers.iow import history_data, latest_data, latest_data_from_db, statistics_data
 from app.routers.account import account

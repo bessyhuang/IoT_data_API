@@ -12,7 +12,11 @@ from fastapi.responses import FileResponse
 
 from app.schemas import Item, Metadata
 from app.routers.iow.latest_data import get_Station_metadata, write_file, get_PhysicalQuantity_latest_data
-from app.routers.iow.history_data import get_PhysicalQuantity_history_data, get_PhysicalQuantity_history_data_within12hr, compress
+from app.routers.iow.history_data import (
+    get_PhysicalQuantity_history_data,
+    get_PhysicalQuantity_history_data_within12hr,
+    compress
+)
 
 
 router = APIRouter()
@@ -388,7 +392,7 @@ async def 抽水區間報表(
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_pq_file.filename, "wb") as f:
             f.write(st_pq_file.file.read())
-    except:
+    except Exception as e:
         return {"message": "There was an error uploading the file"}
 
     # Read txt file (One line, one station)
@@ -447,7 +451,7 @@ async def 日和月平均妥善率報表(
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_pq_file.filename, "wb") as f:
             f.write(st_pq_file.file.read())
-    except:
+    except Exception as e:
         return {"message": "There was an error uploading the file"}
 
     # Read txt file (One line, one station & one physical quantity)
@@ -479,7 +483,7 @@ async def 日和月平均妥善率報表(
             f_path = write_file(result_df, f_name)
             if result_df.shape[0] > 0:
                 file_names.append(f_path)
-        except:
+        except Exception as e:
             with open(temp_folder_path + "無歷史資料的監測站_AvailRate_report.txt", "a", encoding="utf-8") as f:
                 f.write(f'{st_name}\t{st_uuid}\n')
 
@@ -513,7 +517,7 @@ async def 最大淹水高度區間報表(
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_pq_file.filename, "wb") as f:
             f.write(st_pq_file.file.read())
-    except:
+    except Exception as e:
         return {"message": "There was an error uploading the file"}
 
     # Read txt file (One line, one station)
@@ -577,7 +581,7 @@ async def 運轉台數與抽水量的即時報表(
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_pq_file.filename, "wb") as f:
             f.write(st_pq_file.file.read())
-    except:
+    except Exception as e:
         return {"message": "There was an error uploading the file"}
 
     # Read txt file (One line, one station)
@@ -610,7 +614,7 @@ async def 運轉台數與抽水量的即時報表(
             f_path = write_file(result_df, f_name)
             if result_df.shape[0] > 0:
                 file_names.append(f_path)
-        except:
+        except Exception as e:
             with open(temp_folder_path + "無歷史資料的監測站_OperatingUnits_and_PumpingVolumes_report.txt", "a", encoding="utf-8") as f_out:
                 f_out.write(f'{st_name}\t{st_uuid}\n')
 

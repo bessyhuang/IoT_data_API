@@ -81,7 +81,8 @@ def get_PhysicalQuantity_history_data(
     All_pq_Dict = dict()
     All_pq_Dict[item.pq_uuid] = []
 
-    pq_history_API = f'TimeSeriesData/ReadRawData/{item.pq_uuid}/{item.datetime_start}T00.00.00/{item.datetime_end}T23.59.59/true/480'
+    pq_history_API = 'TimeSeriesData/ReadRawData/' + \
+        f'{item.pq_uuid}/{item.datetime_start}T00.00.00/{item.datetime_end}T23.59.59/true/480'
     for attempt in range(max_retries):
         try:
             pq_history_response = requests.get(f'https://iapi.wra.gov.tw/v3/api/{pq_history_API}', headers=headers, timeout=5)
@@ -175,7 +176,7 @@ async def download_multiple_stations_raw_data(
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_pq_file.filename, 'wb') as f:
             f.write(st_pq_file.file.read())
-    except:
+    except Exception as e:
         return {"message": "There was an error uploading the file"}
 
     # Read txt file (One line, one station)
