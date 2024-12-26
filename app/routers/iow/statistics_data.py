@@ -198,7 +198,7 @@ def calculate_pump_runtime(
                 date_1, date_2 = date_interval
                 duration_1 = (date_2 - date_1).total_seconds()
                 pumping_volume_1 = duration_1 * 0.3
-                
+
                 # 略過不計：抽水小於等於10秒(抽水量小於等於3)
                 if pumping_volume_1 > 3:
                     group_sums.append(
@@ -218,7 +218,7 @@ def calculate_pump_runtime(
             # Single interval case (no date boundary crossing)
             duration_sec = (end_time - start_time).total_seconds()
             pumping_volume = duration_sec * 0.3
-            
+
             # 略過不計：抽水小於等於10秒(抽水量小於等於3)
             if pumping_volume > 3:
                 group_sums.append(
@@ -393,7 +393,7 @@ async def 抽水區間報表(
         with open(temp_folder_path + st_pq_file.filename, "wb") as f:
             f.write(st_pq_file.file.read())
     except Exception as e:
-        return {"message": "There was an error uploading the file"}
+        return {"message": f"There was an error uploading the file. {str(e)}"}
 
     # Read txt file (One line, one station)
     with open(temp_folder_path + st_pq_file.filename, "r", encoding="utf-8") as f:
@@ -452,7 +452,7 @@ async def 日和月平均妥善率報表(
         with open(temp_folder_path + st_pq_file.filename, "wb") as f:
             f.write(st_pq_file.file.read())
     except Exception as e:
-        return {"message": "There was an error uploading the file"}
+        return {"message": f"There was an error uploading the file. {str(e)}"}
 
     # Read txt file (One line, one station & one physical quantity)
     with open(temp_folder_path + st_pq_file.filename, "r", encoding="utf-8") as f:
@@ -484,6 +484,7 @@ async def 日和月平均妥善率報表(
             if result_df.shape[0] > 0:
                 file_names.append(f_path)
         except Exception as e:
+            print(str(e))
             with open(temp_folder_path + "無歷史資料的監測站_AvailRate_report.txt", "a", encoding="utf-8") as f:
                 f.write(f'{st_name}\t{st_uuid}\n')
 
@@ -518,7 +519,7 @@ async def 最大淹水高度區間報表(
         with open(temp_folder_path + st_pq_file.filename, "wb") as f:
             f.write(st_pq_file.file.read())
     except Exception as e:
-        return {"message": "There was an error uploading the file"}
+        return {"message": f"There was an error uploading the file. {str(e)}"}
 
     # Read txt file (One line, one station)
     with open(temp_folder_path + st_pq_file.filename, "r", encoding="utf-8") as f:
@@ -582,7 +583,7 @@ async def 運轉台數與抽水量的即時報表(
         with open(temp_folder_path + st_pq_file.filename, "wb") as f:
             f.write(st_pq_file.file.read())
     except Exception as e:
-        return {"message": "There was an error uploading the file"}
+        return {"message": f"There was an error uploading the file. {str(e)}"}
 
     # Read txt file (One line, one station)
     with open(temp_folder_path + st_pq_file.filename, "r", encoding="utf-8") as f:
@@ -615,6 +616,7 @@ async def 運轉台數與抽水量的即時報表(
             if result_df.shape[0] > 0:
                 file_names.append(f_path)
         except Exception as e:
+            print(str(e))
             with open(temp_folder_path + "無歷史資料的監測站_OperatingUnits_and_PumpingVolumes_report.txt", "a", encoding="utf-8") as f_out:
                 f_out.write(f'{st_name}\t{st_uuid}\n')
 
@@ -731,8 +733,12 @@ async def 十二小時內無抽水紀錄_可調度抽水機的即時報表():
                 datetime_start=start_time,
                 datetime_end=end_time,
             )
-            df = get_PhysicalQuantity_history_data_within12hr(headers, PAYLOAD["client_id"], PAYLOAD["client_secret"], pump_item, row['st_name'])
-        pq_uuid_dict = get_PhysicalQuantity_latest_data(row['st_uuid'], headers, PAYLOAD["client_id"], PAYLOAD["client_secret"])
+            df = get_PhysicalQuantity_history_data_within12hr(
+                headers, PAYLOAD["client_id"], PAYLOAD["client_secret"], pump_item, row['st_name']
+            )
+        pq_uuid_dict = get_PhysicalQuantity_latest_data(
+            row['st_uuid'], headers, PAYLOAD["client_id"], PAYLOAD["client_secret"]
+        )
         data_time = pq_uuid_dict[pq_uuid]["TimeStamp"].replace("+08:00", "")
         result_dict = transform_avail_pump(pump_item, df, data_time)
         st_dict[row['st_uuid']] = result_dict

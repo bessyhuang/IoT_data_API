@@ -177,7 +177,7 @@ async def download_multiple_stations_raw_data(
         with open(temp_folder_path + st_pq_file.filename, 'wb') as f:
             f.write(st_pq_file.file.read())
     except Exception as e:
-        return {"message": "There was an error uploading the file"}
+        return {"message": f"There was an error uploading the file. {str(e)}"}
 
     # Read txt file (One line, one station)
     with open(temp_folder_path + st_pq_file.filename, 'r', encoding='utf-8') as f:
