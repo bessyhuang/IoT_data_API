@@ -483,7 +483,7 @@ async def 日和月平均妥善率報表(
             f_path = write_file(result_df, f_name)
             if result_df.shape[0] > 0:
                 file_names.append(f_path)
-        except Exception as e:
+        except Exception:
             with open(temp_folder_path + "無歷史資料的監測站_AvailRate_report.txt", "a", encoding="utf-8") as f:
                 f.write(f'{st_name}\t{st_uuid}\n')
 
@@ -614,7 +614,7 @@ async def 運轉台數與抽水量的即時報表(
             f_path = write_file(result_df, f_name)
             if result_df.shape[0] > 0:
                 file_names.append(f_path)
-        except Exception as e:
+        except Exception:
             with open(temp_folder_path + "無歷史資料的監測站_OperatingUnits_and_PumpingVolumes_report.txt", "a", encoding="utf-8") as f_out:
                 f_out.write(f'{st_name}\t{st_uuid}\n')
 
@@ -694,7 +694,7 @@ async def 十二小時內無抽水紀錄_可調度抽水機的即時報表():
     now = datetime.now()
     start_time = pytz.timezone('Asia/Taipei').localize(
         datetime.combine(now - timedelta(days=1), time(now.hour, 0, 0))
-        ).strftime("%Y-%m-%dT%H.00.00")
+    ).strftime("%Y-%m-%dT%H.00.00")
     end_time = datetime.now().strftime("%Y-%m-%dT%H.00.00")
 
     # STATION_UUIDs (get from local)

@@ -129,16 +129,15 @@ def compress(file_names):
 @router.post("/download/single_station/raw_data", response_class=FileResponse)
 async def download_single_station_raw_data(
     item: Annotated[
-            Item,
-            Body(
-                examples=[{
-                    "datetime_start": "2024-07-01",
-                    "datetime_end": "2024-07-31",
-                    "st_uuid": "",
-                    "pq_uuid": "",
-                }],
-            )
-        ]
+        Item, Body(
+            examples=[{
+                "datetime_start": "2024-07-01",
+                "datetime_end": "2024-07-31",
+                "st_uuid": "",
+                "pq_uuid": "",
+            }],
+        )
+    ]
 ):
     # Get IoW token
     response = requests.post("https://iapi.wra.gov.tw/v3/oauth2/token", data=PAYLOAD, timeout=5).json()
@@ -176,7 +175,7 @@ async def download_multiple_stations_raw_data(
             os.makedirs(temp_folder_path)
         with open(temp_folder_path + st_pq_file.filename, 'wb') as f:
             f.write(st_pq_file.file.read())
-    except Exception as e:
+    except Exception:
         return {"message": f"There was an error uploading the file. {str(e)}"}
 
     # Read txt file (One line, one station)
