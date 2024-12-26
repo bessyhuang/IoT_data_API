@@ -340,7 +340,7 @@ async def 滯洪池即時水位(
 
             # 公式： ((堤頂高 - 即時水位)/(堤頂高 - 滯洪池底))*滯洪量*0.7
             estimated_remaining_flood_detention_volume = (
-                (levee_height - water_level)/(levee_height - pool_depth) * flood_detention_volume * 0.7
+                (levee_height - water_level) / (levee_height - pool_depth) * flood_detention_volume * 0.7
             )
             FLOOD_DETENTION_POOL[st_uuid]["預估剩餘滯洪量(m3)"] = round(estimated_remaining_flood_detention_volume, 1)
         merge_list.append(FLOOD_DETENTION_POOL[st_uuid])
