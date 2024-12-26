@@ -44,6 +44,7 @@ def get_Station_metadata(
                 continue
     return None
 
+
 def get_PhysicalQuantity_UUIDs(
     st_uuid, headers, client_id, client_secret, max_retries=5, delay=4
 ):
@@ -74,6 +75,7 @@ def get_PhysicalQuantity_UUIDs(
             else:
                 raise
     return None
+
 
 def get_PhysicalQuantity_latest_data(
     st_uuid, headers, client_id, client_secret, max_retries=5, delay=4
@@ -107,6 +109,7 @@ def get_PhysicalQuantity_latest_data(
                 raise
     return None
 
+
 def get_PhysicalQuantity_metadata(
     pq_uuid, headers, client_id, client_secret, max_retries=5, delay=4
 ):
@@ -138,6 +141,7 @@ def get_PhysicalQuantity_metadata(
                 raise
     return None
 
+
 def write_file(data, filename):
     file_type = filename.split(".")[-1]
     temp_folder_path = base_dir + "/temp/"
@@ -163,8 +167,8 @@ async def lookup_physical_quantity_list(
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
     # API
-    s_response = await get_Station_metadata(st_uuid, headers, client_id, client_secret)
-    pq_uuid_list = await get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
+    s_response = get_Station_metadata(st_uuid, headers, client_id, client_secret)
+    pq_uuid_list = get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
     return {"st_metadata": s_response, "pq_list": pq_uuid_list}
 
 
@@ -179,12 +183,12 @@ async def lookup_station_metadata(
     headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
 
     # API
-    s_response = await get_Station_metadata(st_uuid, headers, client_id, client_secret)
-    pq_uuid_list = await get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
+    s_response = get_Station_metadata(st_uuid, headers, client_id, client_secret)
+    pq_uuid_list = get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
     pq_metadata = []
     if pq_uuid_list:
         for pq_uuid in pq_uuid_list:
-            data = await get_PhysicalQuantity_metadata(pq_uuid, headers, client_id, client_secret)
+            data = get_PhysicalQuantity_metadata(pq_uuid, headers, client_id, client_secret)
             pq_metadata.append(data)
     return {"st_metadata": s_response, "pq_list": pq_uuid_list, "pq_metadata": pq_metadata}
 
@@ -214,7 +218,7 @@ async def download_station_and_physical_quantity_relation(client_id: str, client
     data = {}
     for st_uuid in content:
         st_uuid = st_uuid.replace("\n", "")
-        pq_list = await get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
+        pq_list = get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
         data[st_uuid] = pq_list
 
     # Write json file
@@ -243,14 +247,14 @@ async def 監測站與物理量UUID對應表(
     data = defaultdict(dict)
     merge_list = []
     for st_uuid in st_uuids_list:
-        s_response = await get_Station_metadata(st_uuid, headers, client_id, client_secret)
-        pq_uuid_list = await get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
+        s_response = get_Station_metadata(st_uuid, headers, client_id, client_secret)
+        pq_uuid_list = get_PhysicalQuantity_UUIDs(st_uuid, headers, client_id, client_secret)
         data[st_uuid]["st_uuid"] = st_uuid
         data[st_uuid]["st_name"] = s_response["Name"]
 
         if pq_uuid_list:
             for pq_uuid in pq_uuid_list:
-                pq_metadata_response = await get_PhysicalQuantity_metadata(pq_uuid, headers, client_id, client_secret)
+                pq_metadata_response = get_PhysicalQuantity_metadata(pq_uuid, headers, client_id, client_secret)
                 PQ_desc = pq_metadata_response["Description"]
                 PQ_name = pq_metadata_response["Name"]
 

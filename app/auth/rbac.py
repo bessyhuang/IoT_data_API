@@ -37,11 +37,14 @@ def get_user(username: str):
     user_data = list(USER_db['account'].find({'username': username}))[0]
     return UserInDB(**user_data) if user_data else None
 
+
 def get_password_hash(password):
     return pwd_context.hash(password)
 
+
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
 
 def authenticate_user(username: str, password: str):
     user = get_user(username)
@@ -50,6 +53,7 @@ def authenticate_user(username: str, password: str):
     if not verify_password(password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid password")
     return user
+
 
 def get_current_user(
     fn_security_scopes: SecurityScopes,
@@ -74,12 +78,14 @@ def get_current_user(
     if has_permission:
         return user
 
+
 def get_current_active_user(
     current_user: Annotated[User, Security(get_current_user, scopes=["staff"])]
 ):
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
 
 def scope_checker(required_scopes: list, user_scopes: list):
     has_permission = True

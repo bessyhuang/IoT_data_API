@@ -142,7 +142,9 @@ def transform_avail_pump(pump, df, data_time):
         }
 
 
-def calculate_pump_runtime(pump, df, pump_interval_N_min):
+def calculate_pump_runtime(
+    pump, df, pump_interval_N_min
+):
     if "Value" not in df:
         return pd.DataFrame([
             {

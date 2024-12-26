@@ -31,7 +31,12 @@ PAYLOAD = {
 }
 
 # Get IoW metadata from DB
-HISTORY_dbClient = MongoClient(ENV.get('HISTORY_DB_HOST_PORT'), username=ENV.get('HISTORY_DB_USER'), password=ENV.get('HISTORY_DB_PASSWORD'), authSource=ENV.get('HISTORY_DB_AUTH_SOURCE'))
+HISTORY_dbClient = MongoClient(
+    ENV.get('HISTORY_DB_HOST_PORT'),
+    username=ENV.get('HISTORY_DB_USER'),
+    password=ENV.get('HISTORY_DB_PASSWORD'),
+    authSource=ENV.get('HISTORY_DB_AUTH_SOURCE')
+)
 HISTORY_db = HISTORY_dbClient.iow
 
 

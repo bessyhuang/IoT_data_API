@@ -19,7 +19,12 @@ base_dir = os.getcwd()
 ENV = Config(RepositoryEnv(base_dir + '/.env'))
 
 # Get IoW metadata from DB
-dbClient = MongoClient(ENV.get('DB_HOST_PORT'), username=ENV.get('DB_USER'), password=ENV.get('DB_PASSWORD'), authSource=ENV.get('DB_AUTH_SOURCE'))
+dbClient = MongoClient(
+    ENV.get('DB_HOST_PORT'),
+    username=ENV.get('DB_USER'),
+    password=ENV.get('DB_PASSWORD'),
+    authSource=ENV.get('DB_AUTH_SOURCE')
+)
 db = dbClient.iow
 
 
@@ -27,6 +32,7 @@ def get_Station_metadata_from_DB(st_uuid):
     s_response = list(db.stations.find({"st_uuid": st_uuid}, {"_id": 0}))
     s_response = json.loads(json_util.dumps(s_response, indent=4))
     return s_response
+
 
 def get_PhysicalQuantity_metadata_from_DB(pq_uuid):
     pq_metadata_response = list(db.stations.find(

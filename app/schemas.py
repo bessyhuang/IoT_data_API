@@ -31,6 +31,7 @@ class Item(BaseModel):
     def validate_datetime(cls, value):
         return parse_and_format_date(value)
 
+
 class Metadata(BaseModel):
     st_uuid: str = Field(..., title='監測站 UUID')
     st_name: str = Field(..., title='監測站名稱 / 抽水機編號')
@@ -44,16 +45,19 @@ class Metadata(BaseModel):
     def validate_datetime(cls, value):
         return parse_and_format_date(value)
 
+
 class Role(str, Enum):
     admin = "admin"
     staff = "staff"
     guest = "guest"
+
 
 class Function(str, Enum):
     project = "project"
     device_list = "device_list"
     replacement = "replacement"
     map = "map"
+
 
 class User(BaseModel):
     username: str
@@ -65,8 +69,10 @@ class User(BaseModel):
     roles: List[Role]
     functions: List[Function]
 
+
 class UserInDB(User):
     hashed_password: str
+
 
 class Token(BaseModel):
     access_token: str

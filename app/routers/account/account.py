@@ -41,6 +41,7 @@ def login_for_access_token(
     )
     return Token(access_token=access_token, token_type="bearer")
 
+
 @router.get("/api/v1/read-all-users", response_model=List[User])
 async def read_users(
     current_user: Annotated[User, Depends(get_current_active_user)]
@@ -48,6 +49,7 @@ async def read_users(
     # User must have ["staff"] in scopes & is_active=True to access function
     users = list(USER_db['account'].find())
     return users
+
 
 @router.get("/api/v1/read-user/{username}", response_model=User)
 async def read_user(
@@ -59,6 +61,7 @@ async def read_user(
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+
 @router.get("/api/v1/map")
 async def view_map(
     current_user: Annotated[User, Security(get_current_active_user, scopes=["map"])]
@@ -66,12 +69,14 @@ async def view_map(
     # User must have ["staff", "map"] in scopes & is_active=True to access function
     return [{"owner": current_user.username, "role": current_user.roles, "function": current_user.functions, 'map': "xxx"}]
 
+
 @router.get("/api/v1/status/")
 async def read_system_status(
     current_user: Annotated[User, Depends(get_current_user)]
 ):
     # User is active or inactive can access function
     return {"status": "ok"}
+
 
 @router.post("/api/v1/create-user", response_model=User)
 def insert_user(
